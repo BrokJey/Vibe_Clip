@@ -6,6 +6,7 @@ import com.vibeclip.dto.auth.RegisterRequest;
 import com.vibeclip.entity.Role;
 import com.vibeclip.entity.RoleName;
 import com.vibeclip.entity.User;
+import com.vibeclip.mapper.UserMapper;
 import com.vibeclip.repository.RoleRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,19 +24,22 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final UserMapper userMapper;
 
     public AuthService(
             AuthenticationManager authenticationManager,
             UserService userService,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            UserMapper userMapper
     ) {
         this.authenticationManager = authenticationManager;
         this.userService = userService;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.userMapper = userMapper;
     }
 
     @Transactional
@@ -47,9 +51,7 @@ public class AuthService {
             throw new IllegalStateException("Username already in use");
         }
 
-        User user = new User();
-        user.setEmail(request.getEmail());
-        user.setUsername(request.getUsername());
+        User user = userMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         Role userRole = roleRepository.findByName(RoleName.ROLE_USER)

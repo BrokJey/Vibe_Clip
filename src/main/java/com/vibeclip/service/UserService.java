@@ -3,19 +3,20 @@ package com.vibeclip.service;
 import com.vibeclip.entity.User;
 import com.vibeclip.repository.UserRepository;
 import java.util.Optional;
+
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
-
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
