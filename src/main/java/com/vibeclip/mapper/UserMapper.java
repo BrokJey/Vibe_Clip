@@ -27,14 +27,14 @@ public interface UserMapper {
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
-    User toEntity(RegisterRequest request);
+    User fromDTO(RegisterRequest request);
 
     /**
      * Преобразует User entity в UserResponse DTO (без пароля)
      * Роли преобразуются в Set<String> через кастомный метод
      */
     @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToStringSet")
-    UserResponse toResponse(User user);
+    UserResponse toDTO(User user);
 
     /**
      * Обновляет существующего User данными из RegisterRequest

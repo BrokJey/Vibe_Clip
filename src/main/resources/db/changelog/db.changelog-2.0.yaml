@@ -1,0 +1,495 @@
+databaseChangeLog:
+  - changeSet:
+      id: 4-create-videos
+      author: vibeclip
+      changes:
+        - createTable:
+            tableName: videos
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(1000)
+              - column:
+                  name: video_url
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: thumbnail_url
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: duration_seconds
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+                    defaultValue: "PUBLISHED"
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+        - addForeignKeyConstraint:
+            baseTableName: videos
+            baseColumnNames: author_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_videos_author
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_videos_author
+            tableName: videos
+            columns:
+              - column:
+                  name: author_id
+        - createIndex:
+            indexName: idx_videos_status
+            tableName: videos
+            columns:
+              - column:
+                  name: status
+
+  - changeSet:
+      id: 5-create-video-hashtags
+      author: vibeclip
+      changes:
+        - createTable:
+            tableName: video_hashtags
+            columns:
+              - column:
+                  name: video_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hashtag
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: video_hashtags
+            columnNames: video_id, hashtag
+            constraintName: pk_video_hashtags
+        - addForeignKeyConstraint:
+            baseTableName: video_hashtags
+            baseColumnNames: video_id
+            referencedTableName: videos
+            referencedColumnNames: id
+            constraintName: fk_video_hashtags_video
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_video_hashtags_hashtag
+            tableName: video_hashtags
+            columns:
+              - column:
+                  name: hashtag
+
+  - changeSet:
+      id: 6-create-video-metrics
+      author: vibeclip
+      changes:
+        - createTable:
+            tableName: video_metrics
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: video_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: view_count
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: like_count
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: comment_count
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: share_count
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+        - addForeignKeyConstraint:
+            baseTableName: video_metrics
+            baseColumnNames: video_id
+            referencedTableName: videos
+            referencedColumnNames: id
+            constraintName: fk_video_metrics_video
+            onDelete: CASCADE
+
+  - changeSet:
+      id: 7-create-folders
+      author: vibeclip
+      changes:
+        - createTable:
+            tableName: folders
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(500)
+              - column:
+                  name: owner_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: min_duration_seconds
+                  type: INTEGER
+              - column:
+                  name: max_duration_seconds
+                  type: INTEGER
+              - column:
+                  name: freshness_weight
+                  type: DOUBLE
+                  defaultValueNumeric: 0.5
+              - column:
+                  name: popularity_weight
+                  type: DOUBLE
+                  defaultValueNumeric: 0.5
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+                    defaultValue: "ACTIVE"
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+        - addForeignKeyConstraint:
+            baseTableName: folders
+            baseColumnNames: owner_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_folders_owner
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_folders_owner
+            tableName: folders
+            columns:
+              - column:
+                  name: owner_id
+
+  - changeSet:
+      id: 8-create-folder-preferences
+      author: vibeclip
+      changes:
+        - createTable:
+            tableName: folder_allowed_hashtags
+            columns:
+              - column:
+                  name: folder_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hashtag
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: folder_allowed_hashtags
+            columnNames: folder_id, hashtag
+            constraintName: pk_folder_allowed_hashtags
+        - addForeignKeyConstraint:
+            baseTableName: folder_allowed_hashtags
+            baseColumnNames: folder_id
+            referencedTableName: folders
+            referencedColumnNames: id
+            constraintName: fk_folder_allowed_hashtags
+            onDelete: CASCADE
+        - createTable:
+            tableName: folder_blocked_hashtags
+            columns:
+              - column:
+                  name: folder_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: hashtag
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: folder_blocked_hashtags
+            columnNames: folder_id, hashtag
+            constraintName: pk_folder_blocked_hashtags
+        - addForeignKeyConstraint:
+            baseTableName: folder_blocked_hashtags
+            baseColumnNames: folder_id
+            referencedTableName: folders
+            referencedColumnNames: id
+            constraintName: fk_folder_blocked_hashtags
+            onDelete: CASCADE
+        - createTable:
+            tableName: folder_allowed_authors
+            columns:
+              - column:
+                  name: folder_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: folder_allowed_authors
+            columnNames: folder_id, author_id
+            constraintName: pk_folder_allowed_authors
+        - addForeignKeyConstraint:
+            baseTableName: folder_allowed_authors
+            baseColumnNames: folder_id
+            referencedTableName: folders
+            referencedColumnNames: id
+            constraintName: fk_folder_allowed_authors
+            onDelete: CASCADE
+        - createTable:
+            tableName: folder_blocked_authors
+            columns:
+              - column:
+                  name: folder_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: folder_blocked_authors
+            columnNames: folder_id, author_id
+            constraintName: pk_folder_blocked_authors
+        - addForeignKeyConstraint:
+            baseTableName: folder_blocked_authors
+            baseColumnNames: folder_id
+            referencedTableName: folders
+            referencedColumnNames: id
+            constraintName: fk_folder_blocked_authors
+            onDelete: CASCADE
+
+  - changeSet:
+      id: 9-create-folder-videos
+      author: vibeclip
+      changes:
+        - createTable:
+            tableName: folder_videos
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: folder_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: video_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: score
+                  type: DOUBLE
+                  defaultValueNumeric: 0.0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: shown
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: added_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: folder_videos
+            columnNames: folder_id, video_id
+            constraintName: uk_folder_videos_unique
+        - addForeignKeyConstraint:
+            baseTableName: folder_videos
+            baseColumnNames: folder_id
+            referencedTableName: folders
+            referencedColumnNames: id
+            constraintName: fk_folder_videos_folder
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: folder_videos
+            baseColumnNames: video_id
+            referencedTableName: videos
+            referencedColumnNames: id
+            constraintName: fk_folder_videos_video
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_folder_videos_folder
+            tableName: folder_videos
+            columns:
+              - column:
+                  name: folder_id
+        - createIndex:
+            indexName: idx_folder_videos_position
+            tableName: folder_videos
+            columns:
+              - column:
+                  name: folder_id
+              - column:
+                  name: position
+
+  - changeSet:
+      id: 10-create-reactions
+      author: vibeclip
+      changes:
+        - createTable:
+            tableName: reactions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: video_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reaction_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: watch_duration_seconds
+                  type: INTEGER
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+        - addUniqueConstraint:
+            tableName: reactions
+            columnNames: user_id, video_id, reaction_type
+            constraintName: uk_reactions_unique
+        - addForeignKeyConstraint:
+            baseTableName: reactions
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_reactions_user
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: reactions
+            baseColumnNames: video_id
+            referencedTableName: videos
+            referencedColumnNames: id
+            constraintName: fk_reactions_video
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_reactions_user
+            tableName: reactions
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            indexName: idx_reactions_video
+            tableName: reactions
+            columns:
+              - column:
+                  name: video_id
+        - createIndex:
+            indexName: idx_reactions_type
+            tableName: reactions
+            columns:
+              - column:
+                  name: reaction_type
+
+
