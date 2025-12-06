@@ -21,12 +21,19 @@ public class AuthController {
         this.authService = authService;
     }
 
+    // Регистрация нового пользователя в системе
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Вход пользователя в систему
+     * 
+     * @param request данные для входа (email, password)
+     * @return JWT токен для аутентификации
+     */
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
