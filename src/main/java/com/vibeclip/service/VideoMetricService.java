@@ -5,33 +5,31 @@ import com.vibeclip.entity.Video;
 import com.vibeclip.entity.VideoMetric;
 import com.vibeclip.mapper.VideoMapper;
 import com.vibeclip.repository.VideoMetricRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class VideoMetricService {
 
     private final VideoMetricRepository videoMetricRepository;
     private final VideoMapper videoMapper;
 
-    public VideoMetricService(
-            VideoMetricRepository videoMetricRepository,
-            VideoMapper videoMapper
-    ) {
-        this.videoMetricRepository = videoMetricRepository;
-        this.videoMapper = videoMapper;
-    }
-
     public VideoMetricsResponse getByVideoId(UUID videoId) {
         VideoMetric metric = videoMetricRepository.findByVideoId(videoId)
-                .orElseThrow(() -> new IllegalArgumentException("Video metrics not found for video: " + videoId));
+                .orElseThrow(() -> new IllegalArgumentException("Видеометрики не найдены для видео: " + videoId));
         return videoMapper.toMetricsResponse(metric);
     }
 
     public VideoMetricsResponse getByVideo(Video video) {
         VideoMetric metric = videoMetricRepository.findByVideo(video)
-                .orElseThrow(() -> new IllegalArgumentException("Video metrics not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Видеометрики не найдены"));
         return videoMapper.toMetricsResponse(metric);
     }
 
@@ -57,7 +55,7 @@ public class VideoMetricService {
 
     public VideoMetric getEntityByVideo(Video video) {
         return videoMetricRepository.findByVideo(video)
-                .orElseThrow(() -> new IllegalArgumentException("Video metrics not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Видеометрики не найдены"));
     }
 }
 

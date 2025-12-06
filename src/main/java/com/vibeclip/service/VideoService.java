@@ -10,34 +10,30 @@ import com.vibeclip.mapper.VideoMapper;
 import com.vibeclip.repository.VideoMetricRepository;
 import com.vibeclip.repository.VideoRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class VideoService {
 
     private final VideoRepository videoRepository;
     private final VideoMetricRepository videoMetricRepository;
     private final VideoMapper videoMapper;
 
-    public VideoService(
-            VideoRepository videoRepository,
-            VideoMetricRepository videoMetricRepository,
-            VideoMapper videoMapper
-    ) {
-        this.videoRepository = videoRepository;
-        this.videoMetricRepository = videoMetricRepository;
-        this.videoMapper = videoMapper;
-    }
 
     @Transactional
     public VideoResponse create(VideoRequest request, User author) {
         Video video = videoMapper.fromDTO(request);
         video.setAuthor(author);
-        video.setStatus(VideoStatus.PENDING); // На модерации по умолчанию
+        video.setStatus(VideoStatus.PUBLISHED);
 
         // Устанавливаем хэштеги, если они есть
         if (request.getHashtags() != null) {
@@ -56,25 +52,26 @@ public class VideoService {
                 .build();
         videoMetricRepository.save(metric);
 
+        log.info("Создано видео {} ", request.getTitle());
         return videoMapper.toDTO(saved);
     }
 
     public VideoResponse getById(UUID id) {
         Video video = videoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Video not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Видео не найдено: " + id));
         return videoMapper.toDTO(video);
     }
 
     public VideoResponse getByIdAndAuthor(UUID id, User author) {
         Video video = videoRepository.findByIdAndAuthorId(id, author.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Video not found or you are not the author"));
+                .orElseThrow(() -> new IllegalArgumentException("Видео не найдено или вы не автор"));
         return videoMapper.toDTO(video);
     }
 
     @Transactional
     public VideoResponse update(UUID id, VideoRequest request, User author) {
         Video video = videoRepository.findByIdAndAuthorId(id, author.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Video not found or you are not the author"));
+                .orElseThrow(() -> new IllegalArgumentException("Видео не найдено или вы не автор"));
 
         // Обновляем только переданные поля
         if (request.getTitle() != null) {
@@ -98,7 +95,7 @@ public class VideoService {
     @Transactional
     public void delete(UUID id, User author) {
         Video video = videoRepository.findByIdAndAuthorId(id, author.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Video not found or you are not the author"));
+                .orElseThrow(() -> new IllegalArgumentException("Видео не найдено или вы не автор"));
         video.setStatus(VideoStatus.DELETED);
         videoRepository.save(video);
     }
@@ -106,7 +103,7 @@ public class VideoService {
     @Transactional
     public VideoResponse publish(UUID id, User author) {
         Video video = videoRepository.findByIdAndAuthorId(id, author.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Video not found or you are not the author"));
+                .orElseThrow(() -> new IllegalArgumentException("Видео не найдено или вы не автор"));
         video.setStatus(VideoStatus.PUBLISHED);
         Video updated = videoRepository.save(video);
         return videoMapper.toDTO(updated);
@@ -124,7 +121,7 @@ public class VideoService {
 
     public Video getEntityById(UUID id) {
         return videoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Video not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Видео не найдено: " + id));
     }
 }
 

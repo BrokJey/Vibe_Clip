@@ -9,6 +9,8 @@ import com.vibeclip.entity.User;
 import com.vibeclip.mapper.UserMapper;
 import com.vibeclip.repository.RoleRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -16,6 +18,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+@Slf4j
+@RequiredArgsConstructor
+@Transactional
 @Service
 public class AuthService {
 
@@ -26,36 +31,22 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserMapper userMapper;
 
-    public AuthService(
-            AuthenticationManager authenticationManager,
-            UserService userService,
-            RoleRepository roleRepository,
-            PasswordEncoder passwordEncoder,
-            JwtService jwtService,
-            UserMapper userMapper
-    ) {
-        this.authenticationManager = authenticationManager;
-        this.userService = userService;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.userMapper = userMapper;
-    }
-
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userService.emailExists(request.getEmail())) {
-            throw new IllegalStateException("Email already registered");
+            log.warn("Почта {} уже зарегистрирована.", request.getEmail());
+            throw new IllegalStateException("Эта почта уже зарегистрирована");
         }
         if (userService.usernameExists(request.getUsername())) {
-            throw new IllegalStateException("Username already in use");
+            log.warn("Пользователь с логином {} уже зарегистрирована.", request.getEmail());
+            throw new IllegalStateException("Пользователь с таким логином уже существует");
         }
 
-        User user = userMapper.toEntity(request);
+        User user = userMapper.fromDTO(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
-                .orElseThrow(() -> new IllegalStateException("Default role missing"));
+                .orElseThrow(() -> new IllegalStateException("Роль USER не найдена"));
         user.addRole(userRole);
 
         User saved = userService.save(user);
@@ -65,10 +56,13 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword())
         );
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String token = jwtService.generateToken(userDetails.getUsername(), userDetails.getAuthorities());
+        log.info("Пользователь {} залогинился", request.getEmail());
         return new AuthResponse(token);
     }
 }

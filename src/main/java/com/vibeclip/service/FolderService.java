@@ -58,12 +58,7 @@ public class FolderService {
     }
 
     public FolderResponse getById(UUID id, User owner) {
-        Folder folder = folderRepository.findByIdAndOwner(id, owner)
-                .orElseThrow(() -> {
-                    log.error("Папка не найдена или доступ запрещен. Folder id: {}, User: {}", id, owner.getUsername());
-                    return new IllegalArgumentException("Папка не найдена или вы не являетесь ее владельцем");
-                });
-
+        Folder folder = getEntityById(id, owner);
         log.info("Папка найдена. Folder id: {}, name: {}", id, folder.getName());
         return folderMapper.toDTO(folder);
     }
@@ -84,8 +79,8 @@ public class FolderService {
 
     @Transactional
     public FolderResponse update(UUID id, FolderRequest request, User owner) {
-        Folder folder = folderRepository.findByIdAndOwner(id, owner)
-                .orElseThrow(() -> new IllegalArgumentException("Папка не найдена или вы не являетесь ее владельцем"));
+
+        Folder folder = getEntityById(id, owner);
 
         // Обновляем только переданные поля
         if (request.getName() != null && !request.getName().equals(folder.getName())) {
@@ -107,33 +102,37 @@ public class FolderService {
         }
 
         Folder updated = folderRepository.save(folder);
+        log.info("Папка {} обновлена", folder.getName());
         return folderMapper.toDTO(updated);
     }
 
     @Transactional
     public void delete(UUID id, User owner) {
-        Folder folder = folderRepository.findByIdAndOwner(id, owner)
-                .orElseThrow(() -> new IllegalArgumentException("Folder not found or you are not the owner"));
+        Folder folder = getEntityById(id, owner);
+
         folder.setStatus(FolderStatus.DELETED);
         folderRepository.save(folder);
     }
 
     @Transactional
     public void archive(UUID id, User owner) {
-        Folder folder = folderRepository.findByIdAndOwner(id, owner)
-                .orElseThrow(() -> new IllegalArgumentException("Folder not found or you are not the owner"));
+        Folder folder = getEntityById(id, owner);
         folder.setStatus(FolderStatus.ARCHIVED);
         folderRepository.save(folder);
     }
 
     public Folder getEntityById(UUID id, User owner) {
         return folderRepository.findByIdAndOwner(id, owner)
-                .orElseThrow(() -> new IllegalArgumentException("Folder not found or you are not the owner"));
+                .orElseThrow(() -> {
+                    log.error("Папка не найдена или пользователь '{}' (id={}) не является её владельцем",
+                            owner.getUsername(), owner.getId());
+                    return new IllegalArgumentException("Папка не найдена или вы не являетесь ее владельцем");
+                });
     }
 
     public Folder getEntityByIdAndStatus(UUID id, User owner, FolderStatus status) {
         return folderRepository.findByIdAndOwnerAndStatus(id, owner, status)
-                .orElseThrow(() -> new IllegalArgumentException("Folder not found or you are not the owner"));
+                .orElseThrow(() -> new IllegalArgumentException("Папка не найдена или вы не владелец"));
     }
 }
 

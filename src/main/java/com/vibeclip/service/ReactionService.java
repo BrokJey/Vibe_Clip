@@ -10,13 +10,18 @@ import com.vibeclip.mapper.ReactionMapper;
 import com.vibeclip.repository.ReactionRepository;
 import com.vibeclip.repository.VideoRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class ReactionService {
 
     private final ReactionRepository reactionRepository;
@@ -24,22 +29,13 @@ public class ReactionService {
     private final VideoMetricService videoMetricService;
     private final ReactionMapper reactionMapper;
 
-    public ReactionService(
-            ReactionRepository reactionRepository,
-            VideoRepository videoRepository,
-            VideoMetricService videoMetricService,
-            ReactionMapper reactionMapper
-    ) {
-        this.reactionRepository = reactionRepository;
-        this.videoRepository = videoRepository;
-        this.videoMetricService = videoMetricService;
-        this.reactionMapper = reactionMapper;
-    }
-
     @Transactional
     public ReactionResponse create(ReactionRequest request, User user) {
         Video video = videoRepository.findById(request.getVideoId())
-                .orElseThrow(() -> new IllegalArgumentException("Video not found: " + request.getVideoId()));
+                .orElseThrow(() -> {
+                    log.error("Видео не найдено {} ", request.getVideoId());
+                    return new IllegalArgumentException("Видео не найдено: " + request.getVideoId());
+                });
 
         // Проверяем, не существует ли уже такая реакция
         Reaction existing = reactionRepository
@@ -71,7 +67,10 @@ public class ReactionService {
     @Transactional
     public void delete(UUID videoId, ReactionType reactionType, User user) {
         Video video = videoRepository.findById(videoId)
-                .orElseThrow(() -> new IllegalArgumentException("Video not found: " + videoId));
+                .orElseThrow(() -> {
+                    log.error("Видео не найдено {} ", videoId);
+                    return new IllegalArgumentException("Видео не найдено: " + videoId);
+                });
 
         reactionRepository.deleteByUserAndVideoAndReactionType(user, video, reactionType);
 
@@ -81,7 +80,10 @@ public class ReactionService {
 
     public List<ReactionResponse> getByUserAndVideo(User user, UUID videoId) {
         Video video = videoRepository.findById(videoId)
-                .orElseThrow(() -> new IllegalArgumentException("Video not found: " + videoId));
+                .orElseThrow(() -> {
+                    log.error("Видео не найдено {} ", videoId);
+                    return new IllegalArgumentException("Видео не найдено: " + videoId);
+                });
 
         List<Reaction> reactions = reactionRepository.findByUserAndVideo(user, video);
         return reactions.stream()
@@ -91,7 +93,10 @@ public class ReactionService {
 
     public boolean hasReaction(User user, UUID videoId, ReactionType reactionType) {
         Video video = videoRepository.findById(videoId)
-                .orElseThrow(() -> new IllegalArgumentException("Video not found: " + videoId));
+                .orElseThrow(() -> {
+                    log.error("Видео не найдено {} ", videoId);
+                    return new IllegalArgumentException("Видео не найдено: " + videoId);
+                });
         return reactionRepository.existsByUserAndVideoAndReactionType(user, video, reactionType);
     }
 
@@ -102,9 +107,7 @@ public class ReactionService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Обновляет метрики видео в зависимости от типа реакции
-     */
+    // Обновляет метрики видео в зависимости от типа реакции
     private void updateVideoMetrics(UUID videoId, ReactionType reactionType, boolean increment) {
         switch (reactionType) {
             case LIKE:

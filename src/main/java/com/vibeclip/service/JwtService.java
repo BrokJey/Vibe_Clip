@@ -57,11 +57,11 @@ public class JwtService {
     private String buildToken(Map<String, Object> claims, String subject) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject)
-                .setIssuedAt(new Date(now))
-                .setExpiration(new Date(now + expirationMs))
-                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .setClaims(claims) // роли
+                .setSubject(subject) // email
+                .setIssuedAt(new Date(now)) // когда создался
+                .setExpiration(new Date(now + expirationMs)) // время конца
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256) // подпись
                 .compact();
     }
 
@@ -72,9 +72,9 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSignInKey())
+                .setSigningKey(getSignInKey()) // Ключ для проверки подписи
                 .build()
-                .parseClaimsJws(token)
+                .parseClaimsJws(token) // Парсинг и проверка подписи
                 .getBody();
     }
 
