@@ -49,6 +49,9 @@ public class User {
      * Вспомогательный метод для добавления роли пользователю
      */
     public void addRole(Role role) {
+        if (this.roles == null) {
+            this.roles = new HashSet<>();
+        }
         this.roles.add(role);
     }
 
@@ -56,7 +59,9 @@ public class User {
      * Вспомогательный метод для удаления роли у пользователя
      */
     public void removeRole(Role role) {
-        this.roles.remove(role);
+        if (this.roles != null) {
+            this.roles.remove(role);
+        }
     }
 
     @PrePersist

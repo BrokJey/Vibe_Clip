@@ -45,6 +45,7 @@ public class AuthService {
         User user = userMapper.fromDTO(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
+    
         Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
                 .orElseThrow(() -> new IllegalStateException("Роль USER не найдена"));
         user.addRole(userRole);

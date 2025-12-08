@@ -19,7 +19,7 @@ server:
 
 vibeclip:
   jwt:
-    secret: change-me-to-a-secure-random-value-base64
+    secret: c3VwZXJzZWNyZXRrZXlmb3Jqd3R0b2tlbnNpZ25pbmdhbmR2ZXJpZmljYXRpb24=
     expiration-ms: 3600000
 
 logging:
