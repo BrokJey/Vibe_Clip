@@ -13,7 +13,11 @@ class CommentRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception("Failed to get comments: ${response.message()}"))
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = errorBody?.takeIf { it.isNotBlank() } 
+                    ?: response.message() 
+                    ?: "Failed to get comments"
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -27,7 +31,11 @@ class CommentRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception("Failed to create comment: ${response.message()}"))
+                val errorBody = response.errorBody()?.string()
+                val errorMessage = errorBody?.takeIf { it.isNotBlank() } 
+                    ?: response.message() 
+                    ?: "Failed to create comment"
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)

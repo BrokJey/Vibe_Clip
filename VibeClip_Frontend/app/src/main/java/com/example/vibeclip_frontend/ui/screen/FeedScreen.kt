@@ -1,6 +1,9 @@
-        package com.example.vibeclip_frontend.ui.screen
+package com.example.vibeclip_frontend.ui.screen
 
 import android.view.ViewGroup
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -178,7 +181,7 @@ fun FeedScreen(
                             if (uiState.hasMore && 
                                 !uiState.isLoading && 
                                 currentVideoIndex >= uiState.videos.size - 3) {
-                                viewModel.loadMore()
+                            viewModel.loadMore()
                             }
                         }
                     }
@@ -202,11 +205,21 @@ fun VideoFullScreenCard(
     // Состояние реакций
     var userLikeReaction by remember { mutableStateOf<ReactionResponse?>(null) }
     var userShareReaction by remember { mutableStateOf<ReactionResponse?>(null) }
+    var userViewReaction by remember { mutableStateOf<ReactionResponse?>(null) }
     var metrics by remember { mutableStateOf(video.metrics) }
     var isLoadingReaction by remember { mutableStateOf(false) }
+    var hasTrackedView by remember { mutableStateOf(false) } // Отслеживание, был ли отправлен просмотр
     
     // Состояние для BottomSheet комментариев
     var showCommentsSheet by remember { mutableStateOf(false) }
+    
+    val context = LocalContext.current
+    val baseHost = remember {
+        // Превращаем http://host:port/api/v1/ -> http://host:port
+        BuildConfig.API_BASE_URL
+            .removeSuffix("/")
+            .substringBefore("/api")
+    }
     
     // Загрузка реакций пользователя и метрик при инициализации
     LaunchedEffect(video.id, token) {
@@ -215,10 +228,15 @@ fun VideoFullScreenCard(
             Log.d("FeedScreen", "Loaded reactions for video ${video.id}: ${reactions.size} reactions")
             userLikeReaction = reactions.find { it.reactionType == "LIKE" }
             userShareReaction = reactions.find { it.reactionType == "SHARE" }
+            userViewReaction = reactions.find { it.reactionType == "VIEW" }
             if (userLikeReaction != null) {
                 Log.d("FeedScreen", "User has liked this video: ${userLikeReaction!!.id}")
             } else {
                 Log.d("FeedScreen", "User has NOT liked this video")
+            }
+            if (userViewReaction != null) {
+                hasTrackedView = true // Уже был просмотр
+                Log.d("FeedScreen", "User has already viewed this video: ${userViewReaction!!.id}")
             }
         }.onFailure {
             Log.e("FeedScreen", "Failed to load reactions", it)
@@ -243,11 +261,17 @@ fun VideoFullScreenCard(
             // Когда видео становится активным и это другое видео, перезагружаем реакции и метрики
             // чтобы убедиться, что данные актуальны
             lastActiveVideoId = video.id
+            // Сбрасываем флаг отслеживания просмотра для нового видео
+            hasTrackedView = false
             val reactionsResult = reactionRepository.getVideoReactions(token, video.id)
             reactionsResult.onSuccess { reactions ->
                 Log.d("FeedScreen", "Reloaded reactions for video ${video.id}: ${reactions.size} reactions")
                 userLikeReaction = reactions.find { it.reactionType == "LIKE" }
                 userShareReaction = reactions.find { it.reactionType == "SHARE" }
+                userViewReaction = reactions.find { it.reactionType == "VIEW" }
+                if (userViewReaction != null) {
+                    hasTrackedView = true // Уже был просмотр этого видео
+                }
             }
             
             // Загружаем актуальные метрики с сервера
@@ -359,26 +383,44 @@ fun VideoFullScreenCard(
     }
     
     fun handleShare() {
-        if (isLoadingReaction) return
-        isLoadingReaction = true
-        scope.launch {
-            if (userShareReaction != null) {
-                // Удаляем share
-                val result = reactionRepository.deleteReaction(token, video.id, "SHARE")
-                result.onSuccess {
-                    userShareReaction = null
-                    metrics = metrics?.copy(shareCount = maxOf(0, (metrics?.shareCount ?: 0) - 1))
-                }
-            } else {
-                // Добавляем share
+        // Копируем ссылку на видео в буфер обмена
+        // Формируем ссылку на видео (аналогично бэкенду: /api/v1/videos/{videoId})
+        val shareUrl = "$baseHost/api/v1/videos/${video.id}"
+        
+        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Video URL", shareUrl)
+        clipboard.setPrimaryClip(clip)
+        
+        // Показываем сообщение "Скопировано"
+        Toast.makeText(context, "Скопировано", Toast.LENGTH_SHORT).show()
+        
+        // Обновляем счетчик share только если пользователь еще не делился
+        // Согласно требованиям: один пользователь - один share засчитывается только один раз,
+        // но делиться можно бесконечное количество раз
+        if (userShareReaction == null && !isLoadingReaction) {
+            isLoadingReaction = true
+            scope.launch {
+                // Добавляем share реакцию
                 val result = reactionRepository.createReaction(token, video.id, "SHARE")
                 result.onSuccess { reaction ->
+                    Log.d("FeedScreen", "Share reaction created successfully: ${reaction.id}")
                     userShareReaction = reaction
-                    metrics = metrics?.copy(shareCount = (metrics?.shareCount ?: 0) + 1)
+                    // Обновляем метрики с сервера после небольшой задержки
+                    kotlinx.coroutines.delay(500) // Даём серверу время обновить метрики
+                    val videoResult = videoRepository.getVideo(token, video.id)
+                    videoResult.onSuccess { updatedVideo ->
+                        Log.d("FeedScreen", "Updated share metrics from server: shareCount=${updatedVideo.metrics?.shareCount}")
+                        updatedVideo.metrics?.let { updatedMetrics ->
+                            metrics = updatedMetrics
+                        }
+                    }.onFailure {
+                        Log.e("FeedScreen", "Failed to fetch updated video metrics", it)
+                    }
+                }.onFailure {
+                    Log.e("FeedScreen", "Failed to create share reaction: ${it.message}", it)
                 }
+                isLoadingReaction = false
             }
-            // Здесь можно добавить логику для системного share
-            isLoadingReaction = false
         }
     }
     
@@ -386,13 +428,6 @@ fun VideoFullScreenCard(
         showCommentsSheet = true
     }
     
-    val context = LocalContext.current
-    val baseHost = remember {
-        // Превращаем http://host:port/api/v1/ -> http://host:port
-        BuildConfig.API_BASE_URL
-            .removeSuffix("/")
-            .substringBefore("/api")
-    }
     val resolvedUrl = remember(video.videoUrl) {
         val url = video.videoUrl
         if (url.isNullOrBlank()) {
@@ -448,6 +483,31 @@ fun VideoFullScreenCard(
             // Видео активно - начинаем воспроизведение
             Log.d("FeedScreen", "Video became active, starting playback: ${video.id}")
             exoPlayer.playWhenReady = true
+            
+            // Отправляем VIEW реакцию при первом просмотре видео
+            if (!hasTrackedView && userViewReaction == null) {
+                scope.launch {
+                    val result = reactionRepository.createReaction(token, video.id, "VIEW")
+                    result.onSuccess { reaction ->
+                        Log.d("FeedScreen", "View reaction created successfully: ${reaction.id}")
+                        userViewReaction = reaction
+                        hasTrackedView = true
+                        // Обновляем метрики с сервера после небольшой задержки
+                        kotlinx.coroutines.delay(500) // Даём серверу время обновить метрики
+                        val videoResult = videoRepository.getVideo(token, video.id)
+                        videoResult.onSuccess { updatedVideo ->
+                            Log.d("FeedScreen", "Updated view metrics from server: viewCount=${updatedVideo.metrics?.viewCount}")
+                            updatedVideo.metrics?.let { updatedMetrics ->
+                                metrics = updatedMetrics
+                            }
+                        }.onFailure {
+                            Log.e("FeedScreen", "Failed to fetch updated video metrics", it)
+                        }
+                    }.onFailure {
+                        Log.e("FeedScreen", "Failed to create view reaction: ${it.message}", it)
+                    }
+                }
+            }
         } else if (!isActive) {
             // Видео неактивно - останавливаем воспроизведение
             Log.d("FeedScreen", "Video became inactive, pausing: ${video.id}")
@@ -831,16 +891,18 @@ private fun CommentsBottomSheet(
     
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
-    // Загрузка комментариев
+    // Загрузка комментариев при открытии модального окна
     LaunchedEffect(videoId) {
         isLoading = true
         error = null
+        comments = emptyList() // Очищаем список перед загрузкой
         val result = commentRepository.getVideoComments(token, videoId)
         result.onSuccess { loadedComments ->
+            // Бэкенд возвращает комментарии отсортированные по дате (новые сначала)
             comments = loadedComments
             isLoading = false
         }.onFailure { e ->
-            error = e.message
+            error = e.message ?: "Ошибка при загрузке комментариев"
             isLoading = false
         }
     }
@@ -948,7 +1010,7 @@ private fun CommentsBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -981,11 +1043,13 @@ private fun CommentsBottomSheet(
                                         commentText.text
                                     )
                                     result.onSuccess { newComment ->
-                                        comments = comments + newComment
+                                        // Добавляем новый комментарий в начало списка (новые сначала)
+                                        comments = listOf(newComment) + comments
                                         commentText = TextFieldValue("")
+                                        error = null // Очищаем ошибку при успехе
                                         onCommentAdded()
                                     }.onFailure { e ->
-                                        error = e.message
+                                        error = e.message ?: "Ошибка при отправке комментария"
                                     }
                                     isSending = false
                                 }
@@ -1006,11 +1070,13 @@ private fun CommentsBottomSheet(
                                     commentText.text
                                 )
                                 result.onSuccess { newComment ->
-                                    comments = comments + newComment
+                                    // Добавляем новый комментарий в начало списка (новые сначала)
+                                    comments = listOf(newComment) + comments
                                     commentText = TextFieldValue("")
+                                    error = null // Очищаем ошибку при успехе
                                     onCommentAdded()
                                 }.onFailure { e ->
-                                    error = e.message
+                                    error = e.message ?: "Ошибка при отправке комментария"
                                 }
                                 isSending = false
                             }
@@ -1074,13 +1140,36 @@ private fun CommentItem(comment: CommentResponse) {
 
 private fun formatCommentDate(dateString: String): String {
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        // Пробуем разные форматы даты, которые может вернуть бэкенд
+        val formats = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss"
+        )
         val outputFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-        val date = inputFormat.parse(dateString)
-        if (date != null) {
-            outputFormat.format(date)
-        } else {
+        
+        var parsed = false
+        var formattedDate = dateString
+        
+        for (format in formats) {
+            try {
+                val inputFormat = SimpleDateFormat(format, Locale.getDefault())
+                val date = inputFormat.parse(dateString)
+                if (date != null) {
+                    formattedDate = outputFormat.format(date)
+                    parsed = true
+                    break
+                }
+            } catch (e: Exception) {
+                // Пробуем следующий формат
+            }
+        }
+        
+        if (!parsed) {
+            // Если не удалось распарсить, возвращаем исходную строку
             dateString
+        } else {
+            formattedDate
         }
     } catch (e: Exception) {
         dateString
