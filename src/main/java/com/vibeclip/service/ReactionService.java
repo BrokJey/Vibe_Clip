@@ -12,6 +12,7 @@ import com.vibeclip.repository.VideoRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,6 +30,9 @@ public class ReactionService {
     private final VideoMetricService videoMetricService;
     private final ReactionMapper reactionMapper;
 
+    @Value("${vibeclip.app.base-url:}")
+    private String appBaseUrl;
+
     @Transactional
     public ReactionResponse create(ReactionRequest request, User user) {
         Video video = videoRepository.findById(request.getVideoId())
@@ -43,12 +47,29 @@ public class ReactionService {
                 .orElse(null);
 
         if (existing != null) {
-            // Если реакция уже есть, обновляем её
+            // Для LIKE реакций - toggle поведение: если лайк уже есть, удаляем его
+            if (request.getReactionType() == ReactionType.LIKE) {
+                reactionRepository.delete(existing);
+                // Уменьшаем счетчик лайков
+                updateVideoMetrics(video.getId(), ReactionType.LIKE, false);
+                // Возвращаем null, чтобы фронтенд понял, что лайк удален
+                return null;
+            }
+            
+            // Для других реакций (VIEW, SHARE и т.д.) - обновляем существующую
             if (request.getWatchDurationSeconds() != null) {
                 existing.setWatchDurationSeconds(request.getWatchDurationSeconds());
             }
             Reaction updated = reactionRepository.save(existing);
-            return reactionMapper.toDTO(updated);
+            ReactionResponse response = reactionMapper.toDTO(updated);
+            
+            // Если это реакция SHARE, добавляем ссылку на видео
+            if (request.getReactionType() == ReactionType.SHARE) {
+                String shareUrl = generateShareUrl(video.getId());
+                response.setShareUrl(shareUrl);
+            }
+            
+            return response;
         }
 
         // Создаем новую реакцию
@@ -61,7 +82,16 @@ public class ReactionService {
         // Обновляем метрики видео
         updateVideoMetrics(video.getId(), request.getReactionType(), true);
 
-        return reactionMapper.toDTO(saved);
+        // Генерируем ответ
+        ReactionResponse response = reactionMapper.toDTO(saved);
+        
+        // Если это реакция SHARE, добавляем ссылку на видео
+        if (request.getReactionType() == ReactionType.SHARE) {
+            String shareUrl = generateShareUrl(video.getId());
+            response.setShareUrl(shareUrl);
+        }
+
+        return response;
     }
 
     @Transactional
@@ -87,7 +117,13 @@ public class ReactionService {
 
         List<Reaction> reactions = reactionRepository.findByUserAndVideo(user, video);
         return reactions.stream()
-                .map(reactionMapper::toDTO)
+                .map(reaction -> {
+                    ReactionResponse response = reactionMapper.toDTO(reaction);
+                    if (reaction.getReactionType() == ReactionType.SHARE) {
+                        response.setShareUrl(generateShareUrl(videoId));
+                    }
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -103,7 +139,13 @@ public class ReactionService {
     public List<ReactionResponse> getByUser(User user, ReactionType reactionType) {
         List<Reaction> reactions = reactionRepository.findByUserAndReactionType(user, reactionType);
         return reactions.stream()
-                .map(reactionMapper::toDTO)
+                .map(reaction -> {
+                    ReactionResponse response = reactionMapper.toDTO(reaction);
+                    if (reactionType == ReactionType.SHARE) {
+                        response.setShareUrl(generateShareUrl(reaction.getVideo().getId()));
+                    }
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -129,6 +171,15 @@ public class ReactionService {
                 break;
             // DISLIKE, REPORT, SKIP не влияют на метрики
         }
+    }
+
+    // Генерирует URL для шаринга видео
+    private String generateShareUrl(UUID videoId) {
+        String videoPath = "/api/v1/videos/" + videoId;
+        if (appBaseUrl != null && !appBaseUrl.trim().isEmpty()) {
+            return appBaseUrl.trim().replaceAll("/$", "") + videoPath;
+        }
+        return videoPath; // Возвращаем относительный URL, если base-url не задан
     }
 }
 

@@ -22,6 +22,7 @@ public class ReactionResponse {
     private Integer watchDurationSeconds;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String shareUrl; // URL для шаринга (только для SHARE реакций)
 }
 
 
