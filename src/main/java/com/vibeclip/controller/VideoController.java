@@ -11,6 +11,7 @@ import com.vibeclip.service.ReactionService;
 import com.vibeclip.service.UserService;
 import com.vibeclip.service.VideoMetricService;
 import com.vibeclip.service.VideoService;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -124,7 +125,43 @@ public class VideoController extends BaseController {
         return ResponseEntity.ok(response);
     }
 
+    // Загрузка видео с файлами
+    @PostMapping("/upload")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<VideoResponse> uploadVideo(
+            @RequestPart("file") MultipartFile videoFile,
+            @RequestPart(value = "thumbnail", required = false) MultipartFile thumbnailFile,
+            @RequestPart(value = "title", required = false) String title,
+            @RequestPart(value = "description", required = false) String description,
+            @RequestPart(value = "hashtags", required = false) String hashtags,
+            @RequestPart("durationSeconds") Integer durationSeconds,
+            Authentication authentication
+    ) {
+        User author = getCurrentUser(authentication);
+
+        // Парсим хэштеги из строки (если переданы как строка через @RequestPart)
+        java.util.Set<String> hashtagSet = null;
+        if (hashtags != null && !hashtags.trim().isEmpty()) {
+            hashtagSet = java.util.Arrays.stream(hashtags.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+
+        VideoResponse response = videoService.createWithFiles(
+                videoFile,
+                thumbnailFile,
+                title,
+                description,
+                hashtagSet,
+                durationSeconds,
+                author
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     // Создание реакции на видео (лайк, просмотр, репорт и т.д.)
+    // Для LIKE реакций работает toggle: если лайк уже есть, он удаляется (возвращается null)
     @PostMapping("/{id}/reactions")
     public ResponseEntity<ReactionResponse> createReaction(
             @PathVariable UUID id,
@@ -136,6 +173,12 @@ public class VideoController extends BaseController {
         
         User user = getCurrentUser(authentication);
         ReactionResponse response = reactionService.create(request, user);
+        
+        // Если реакция была удалена (toggle для LIKE), возвращаем 204 No Content
+        if (response == null) {
+            return ResponseEntity.noContent().build();
+        }
+        
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

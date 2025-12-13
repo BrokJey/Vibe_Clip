@@ -13,6 +13,12 @@ spring:
     show-sql: true
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 1GB
+      max-request-size: 1GB
+      file-size-threshold: 1GB
 
 server:
   port: 8000
@@ -21,6 +27,11 @@ vibeclip:
   jwt:
     secret: c3VwZXJzZWNyZXRrZXlmb3Jqd3R0b2tlbnNpZ25pbmdhbmR2ZXJpZmljYXRpb24=
     expiration-ms: 3600000
+  upload:
+    dir: uploads
+    base-url: /uploads
+  app:
+    base-url: http://192.168.1.18:8000  # Базовый URL приложения для генерации ссылок на видео
 
 logging:
   level:

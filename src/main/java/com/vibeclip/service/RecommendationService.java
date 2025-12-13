@@ -45,12 +45,23 @@ public class RecommendationService {
                         .popularityWeight(0.5)
                         .build();
 
+        // Получаем список уже существующих видео в папке (чтобы не дублировать)
+        List<FolderVideo> existingFolderVideos = folderVideoRepository.findByFolder(folder);
+        java.util.Set<UUID> existingVideoIds = existingFolderVideos.stream()
+                .map(fv -> fv.getVideo().getId())
+                .collect(Collectors.toSet());
+
         // Получаем кандидатов с учетом фильтров
-        Pageable pageable = PageRequest.of(0, limit * 2); // Берем больше для ранжирования
+        Pageable pageable = PageRequest.of(0, limit * 3); // Берем больше для ранжирования и фильтрации
         Page<Video> candidates = findCandidates(preference, pageable);
 
+        // Фильтруем кандидатов, исключая уже существующие видео
+        List<Video> newCandidates = candidates.getContent().stream()
+                .filter(video -> !existingVideoIds.contains(video.getId()))
+                .collect(Collectors.toList());
+
         // Ранжируем и выбираем лучшие
-        List<FolderVideo> folderVideos = candidates.getContent().stream()
+        List<FolderVideo> folderVideos = newCandidates.stream()
                 .map(video -> {
                     double score = calculateScore(video, preference);
                     return FolderVideo.builder()
@@ -66,13 +77,19 @@ public class RecommendationService {
                 .collect(Collectors.toList());
 
         // Устанавливаем позиции
+        int maxPosition = existingFolderVideos.stream()
+                .mapToInt(FolderVideo::getPosition)
+                .max()
+                .orElse(-1);
+        
         for (int i = 0; i < folderVideos.size(); i++) {
-            folderVideos.get(i).setPosition(i);
+            folderVideos.get(i).setPosition(maxPosition + 1 + i);
         }
 
-        // Сохраняем в БД
+        // Сохраняем в БД только новые записи
         folderVideos.forEach(folderVideoRepository::save);
 
+        log.info("Сгенерировано {} новых рекомендаций для папки {}", folderVideos.size(), folder.getId());
         return folderVideos;
     }
 

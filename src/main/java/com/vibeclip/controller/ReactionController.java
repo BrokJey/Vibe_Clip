@@ -28,6 +28,7 @@ public class ReactionController extends BaseController {
     }
 
     // Создание реакции на видео (лайк, просмотр, репорт и т.д.)
+    // Для LIKE реакций работает toggle: если лайк уже есть, он удаляется (возвращается null)
     @PostMapping
     public ResponseEntity<ReactionResponse> create(
             @Valid @RequestBody ReactionRequest request,
@@ -35,6 +36,12 @@ public class ReactionController extends BaseController {
     ) {
         User user = getCurrentUser(authentication);
         ReactionResponse response = reactionService.create(request, user);
+        
+        // Если реакция была удалена (toggle для LIKE), возвращаем 204 No Content
+        if (response == null) {
+            return ResponseEntity.noContent().build();
+        }
+        
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

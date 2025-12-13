@@ -32,8 +32,8 @@ public class Video {
     @Column(nullable = false)
     private String videoUrl; // URL к файлу видео (S3, CDN и т.д.)
 
-    @Column(nullable = false)
-    private String thumbnailUrl; // URL к превью
+    @Column
+    private String thumbnailUrl; // URL к превью (опционально, если не указан - будет извлечен первый кадр)
 
     @Column(nullable = false)
     private Integer durationSeconds; // длительность в секундах
@@ -45,6 +45,7 @@ public class Video {
     @ElementCollection
     @CollectionTable(name = "video_hashtags", joinColumns = @JoinColumn(name = "video_id"))
     @Column(name = "hashtag")
+    @Builder.Default
     private Set<String> hashtags = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
