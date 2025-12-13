@@ -56,36 +56,42 @@ public class ReactionService {
                 return null;
             }
             
-            // Для других реакций (VIEW, SHARE и т.д.) - обновляем существующую
+            // Для SHARE реакций: от одного пользователя может быть только 1 SHARE реакция
+            // При повторном запросе просто возвращаем существующую реакцию с shareUrl
+            // Счетчик shareCount НЕ увеличивается повторно
+            if (request.getReactionType() == ReactionType.SHARE) {
+                ReactionResponse response = reactionMapper.toDTO(existing);
+                // Всегда возвращаем shareUrl, даже если реакция уже существует
+                String shareUrl = generateShareUrl(video.getId());
+                response.setShareUrl(shareUrl);
+                return response;
+            }
+            
+            // Для других реакций (VIEW и т.д.) - обновляем существующую
             if (request.getWatchDurationSeconds() != null) {
                 existing.setWatchDurationSeconds(request.getWatchDurationSeconds());
             }
             Reaction updated = reactionRepository.save(existing);
             ReactionResponse response = reactionMapper.toDTO(updated);
-            
-            // Если это реакция SHARE, добавляем ссылку на видео
-            if (request.getReactionType() == ReactionType.SHARE) {
-                String shareUrl = generateShareUrl(video.getId());
-                response.setShareUrl(shareUrl);
-            }
-            
             return response;
         }
 
-        // Создаем новую реакцию
+        // Создаем новую реакцию (реакции еще не существует)
         Reaction reaction = reactionMapper.fromDTO(request);
         reaction.setUser(user);
         reaction.setVideo(video);
 
         Reaction saved = reactionRepository.save(reaction);
 
-        // Обновляем метрики видео
+        // Обновляем метрики видео (увеличиваем счетчик только при первом создании)
         updateVideoMetrics(video.getId(), request.getReactionType(), true);
 
         // Генерируем ответ
         ReactionResponse response = reactionMapper.toDTO(saved);
         
         // Если это реакция SHARE, добавляем ссылку на видео
+        // От одного пользователя может быть только 1 SHARE реакция (уникальное ограничение в БД)
+        // Но получить shareUrl пользователь может сколько угодно раз
         if (request.getReactionType() == ReactionType.SHARE) {
             String shareUrl = generateShareUrl(video.getId());
             response.setShareUrl(shareUrl);

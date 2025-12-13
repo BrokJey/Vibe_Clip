@@ -26,6 +26,19 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            
+            <!-- Deep Link для открытия видео по ссылке -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Поддержка ссылок вида: http://192.168.1.18:8000/v/{videoId} -->
+                <data
+                    android:scheme="http"
+                    android:host="192.168.1.18"
+                    android:port="8000"
+                    android:pathPrefix="/v/" />
+            </intent-filter>
         </activity>
     </application>
 

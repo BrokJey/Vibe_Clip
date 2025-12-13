@@ -49,6 +49,10 @@ public class VideoMetricService {
         videoMetricRepository.incrementCommentCount(videoId);
     }
 
+    public void decrementCommentCount(UUID videoId) {
+        videoMetricRepository.decrementCommentCount(videoId);
+    }
+
     public void incrementShareCount(UUID videoId) {
         videoMetricRepository.incrementShareCount(videoId);
     }

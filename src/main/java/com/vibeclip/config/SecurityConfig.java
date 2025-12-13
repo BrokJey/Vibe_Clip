@@ -49,7 +49,14 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/actuator/health"),
                                 new AntPathRequestMatcher("/error"),
                                 new AntPathRequestMatcher("/h2-console/**"),
-                                new AntPathRequestMatcher("/uploads/**")
+                                new AntPathRequestMatcher("/uploads/**"),
+                                // Публичный доступ к просмотру видео (GET запросы)
+                                new AntPathRequestMatcher("/api/v1/videos", "GET"),
+                                new AntPathRequestMatcher("/api/v1/videos/*", "GET"),
+                                new AntPathRequestMatcher("/api/v1/videos/*/metrics", "GET"),
+                                // Публичный доступ к просмотру комментариев (GET запросы)
+                                new AntPathRequestMatcher("/api/v1/videos/*/comments", "GET"),
+                                new AntPathRequestMatcher("/api/v1/videos/comments/*", "GET")
                         ).permitAll()
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))

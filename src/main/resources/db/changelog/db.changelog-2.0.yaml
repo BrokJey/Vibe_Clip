@@ -492,4 +492,73 @@ databaseChangeLog:
               - column:
                   name: reaction_type
 
+  - changeSet:
+      id: 11-create-comments
+      author: vibeclip
+      changes:
+        - createTable:
+            tableName: comments
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: video_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: text
+                  type: VARCHAR(2000)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+        - addForeignKeyConstraint:
+            baseTableName: comments
+            baseColumnNames: video_id
+            referencedTableName: videos
+            referencedColumnNames: id
+            constraintName: fk_comments_video
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: comments
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_comments_user
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_comments_video
+            tableName: comments
+            columns:
+              - column:
+                  name: video_id
+        - createIndex:
+            indexName: idx_comments_user
+            tableName: comments
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            indexName: idx_comments_created_at
+            tableName: comments
+            columns:
+              - column:
+                  name: created_at
+
 

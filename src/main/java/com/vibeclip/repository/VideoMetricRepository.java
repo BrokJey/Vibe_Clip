@@ -51,6 +51,13 @@ public interface VideoMetricRepository extends JpaRepository<VideoMetric, UUID> 
     void incrementCommentCount(@Param("videoId") UUID videoId);
 
     /**
+     * Уменьшает счетчик комментариев
+     */
+    @Modifying
+    @Query("UPDATE VideoMetric vm SET vm.commentCount = vm.commentCount - 1 WHERE vm.video.id = :videoId AND vm.commentCount > 0")
+    void decrementCommentCount(@Param("videoId") UUID videoId);
+
+    /**
      * Увеличивает счетчик репостов
      */
     @Modifying

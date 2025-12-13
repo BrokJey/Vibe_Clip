@@ -38,6 +38,24 @@ class VideoRepository {
         }
     }
     
+    suspend fun getShareUrl(id: String): Result<String> {
+        return try {
+            val response = apiService.getShareUrl(id)
+            if (response.isSuccessful && response.body() != null) {
+                val shareUrl = response.body()!!["shareUrl"]
+                if (shareUrl != null) {
+                    Result.success(shareUrl)
+                } else {
+                    Result.failure(Exception("Share URL not found in response"))
+                }
+            } else {
+                Result.failure(Exception("Failed to get share URL: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
     suspend fun createVideo(token: String, request: VideoRequest): Result<VideoResponse> {
         return try {
             val response = apiService.createVideo("Bearer $token", request)

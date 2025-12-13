@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${video.title}">Vibe Clip - Видео</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .video-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 aspect ratio */
+            background: #000;
+        }
+        
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .video-info {
+            padding: 30px;
+        }
+        
+        .video-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        
+        .video-author {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .video-description {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .video-metrics {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            padding: 20px 0;
+            border-top: 1px solid #eee;
+        }
+        
+        .metric {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .metric-label {
+            font-size: 14px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .hashtags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .hashtag {
+            background: #f0f0f0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .hashtag:hover {
+            background: #e0e0e0;
+        }
+        
+        @media (max-width: 768px) {
+            .video-info {
+                padding: 20px;
+            }
+            
+            .video-title {
+                font-size: 22px;
+            }
+            
+            .video-metrics {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <div class="video-wrapper">
+            <video controls autoplay muted playsinline>
+                <source th:src="${videoUrl}" type="video/mp4">
+                Ваш браузер не поддерживает воспроизведение видео.
+            </video>
+        </div>
+        
+        <div class="video-info">
+            <h1 class="video-title" th:text="${video.title}">Название видео</h1>
+            <div class="video-author" th:if="${video.authorUsername}">
+                Автор: <span th:text="${video.authorUsername}">User</span>
+            </div>
+            <div class="video-description" th:if="${video.description}" th:text="${video.description}">
+                Описание видео
+            </div>
+            
+            <div class="video-metrics" th:if="${video.metrics}">
+                <div class="metric">
+                    <div class="metric-value" th:text="${video.metrics.viewCount}">0</div>
+                    <div class="metric-label">Просмотров</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" th:text="${video.metrics.likeCount}">0</div>
+                    <div class="metric-label">Лайков</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" th:text="${video.metrics.commentCount}">0</div>
+                    <div class="metric-label">Комментариев</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" th:text="${video.metrics.shareCount}">0</div>
+                    <div class="metric-label">Репостов</div>
+                </div>
+            </div>
+            
+            <div class="hashtags" th:if="${video.hashtags and !video.hashtags.empty}">
+                <a href="#" class="hashtag" th:each="hashtag : ${video.hashtags}" th:text="${'#' + hashtag}">#hashtag</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
