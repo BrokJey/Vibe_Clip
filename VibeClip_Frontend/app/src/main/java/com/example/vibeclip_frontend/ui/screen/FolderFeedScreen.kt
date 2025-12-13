@@ -81,7 +81,12 @@ fun FolderFeedScreen(
                         .background(Color.Black)
                 ) { page ->
                     val folderVideo = uiState.videos[page]
-                    VideoFullScreenCard(video = folderVideo.video)
+                    val isActive = page == pagerState.currentPage
+                    VideoFullScreenCard(
+                        video = folderVideo.video,
+                        isActive = isActive,
+                        token = token
+                    )
                 }
 
                 LaunchedEffect(pagerState.currentPage, uiState.hasMore, uiState.isLoading) {

@@ -11,43 +11,55 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+// Тёмно-фиолетовая цветовая схема
+private val DarkPurpleColorScheme = darkColorScheme(
+    primary = MediumPurple, // Основной фиолетовый для акцентов
+    onPrimary = White, // Белый текст на фиолетовом
+    secondary = LightPurple, // Светло-фиолетовый для вторичных элементов
+    onSecondary = White,
+    tertiary = DarkPurple, // Тёмно-фиолетовый для третичных элементов
+    onTertiary = White,
+    background = Black, // Чёрный фон
+    onBackground = White, // Белый текст на чёрном
+    surface = DarkGray, // Тёмно-серый для поверхностей (карточки, панели)
+    onSurface = White, // Белый текст на поверхностях
+    surfaceVariant = DarkGray.copy(alpha = 0.8f), // Вариант поверхности
+    onSurfaceVariant = White.copy(alpha = 0.8f),
+    error = androidx.compose.ui.graphics.Color(0xFFCF6679),
+    onError = White,
+    outline = MediumPurple.copy(alpha = 0.5f) // Фиолетовая обводка
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+// Светлая тема (тоже тёмная для единообразия)
+private val LightColorScheme = darkColorScheme(
+    primary = MediumPurple,
+    onPrimary = White,
+    secondary = LightPurple,
+    onSecondary = White,
+    tertiary = DarkPurple,
+    onTertiary = White,
+    background = Black,
+    onBackground = White,
+    surface = DarkGray,
+    onSurface = White,
+    surfaceVariant = DarkGray.copy(alpha = 0.8f),
+    onSurfaceVariant = White.copy(alpha = 0.8f),
+    error = androidx.compose.ui.graphics.Color(0xFFCF6679),
+    onError = White,
+    outline = MediumPurple.copy(alpha = 0.5f)
 )
 
 @Composable
 fun VibeClip_FrontendTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true, // Всегда тёмная тема
+    // Dynamic color отключен, используем кастомную тему
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        // Отключаем dynamic color, используем только нашу кастомную тему
+        darkTheme -> DarkPurpleColorScheme
+        else -> LightColorScheme // Даже светлая тема будет тёмной
     }
 
     MaterialTheme(

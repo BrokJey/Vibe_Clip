@@ -82,11 +82,32 @@ interface ApiService {
         @Body request: ReactionRequest
     ): Response<ReactionResponse>
     
-    @DELETE("reactions/{id}")
+    @DELETE("reactions/video/{videoId}")
     suspend fun deleteReaction(
         @Header("Authorization") token: String,
-        @Path("id") id: String
+        @Path("videoId") videoId: String,
+        @Query("reactionType") reactionType: String
     ): Response<Unit>
+    
+    @GET("reactions/video/{videoId}")
+    suspend fun getVideoReactions(
+        @Header("Authorization") token: String,
+        @Path("videoId") videoId: String
+    ): Response<List<ReactionResponse>>
+    
+    // Comment endpoints
+    @GET("videos/{id}/comments")
+    suspend fun getVideoComments(
+        @Header("Authorization") token: String,
+        @Path("id") videoId: String
+    ): Response<List<CommentResponse>>
+    
+    @POST("videos/{id}/comments")
+    suspend fun createComment(
+        @Header("Authorization") token: String,
+        @Path("id") videoId: String,
+        @Body request: CommentRequest
+    ): Response<CommentResponse>
 }
 
 

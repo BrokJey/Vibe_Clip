@@ -2,7 +2,9 @@ package com.example.vibeclip_frontend.di
 
 import android.content.Context
 import com.example.vibeclip_frontend.data.repository.AuthRepository
+import com.example.vibeclip_frontend.data.repository.CommentRepository
 import com.example.vibeclip_frontend.data.repository.FolderRepository
+import com.example.vibeclip_frontend.data.repository.ReactionRepository
 import com.example.vibeclip_frontend.data.repository.UserRepository
 import com.example.vibeclip_frontend.data.repository.VideoRepository
 import com.example.vibeclip_frontend.util.TokenManager
@@ -23,12 +25,20 @@ object AppModule {
     lateinit var userRepository: UserRepository
         private set
     
+    lateinit var reactionRepository: ReactionRepository
+        private set
+    
+    lateinit var commentRepository: CommentRepository
+        private set
+    
     fun initialize(context: Context) {
         tokenManager = TokenManager(context)
         authRepository = AuthRepository()
         videoRepository = VideoRepository()
         folderRepository = FolderRepository()
         userRepository = UserRepository()
+        reactionRepository = ReactionRepository()
+        commentRepository = CommentRepository()
     }
 }
 
