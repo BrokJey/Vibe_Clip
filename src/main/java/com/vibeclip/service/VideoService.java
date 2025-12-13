@@ -32,6 +32,7 @@ public class VideoService {
     private final VideoMapper videoMapper;
     private final FileStorageService fileStorageService;
     private final VideoMetricService videoMetricService;
+    private final RecommendationService recommendationService;
 
 
     @Transactional
@@ -182,6 +183,28 @@ public class VideoService {
                     }
                     return response;
                 });
+    }
+
+    /**
+     * Получает рекомендованную ленту для пользователя на основе его лайков
+     * Если пользователь не авторизован или у него нет лайков, возвращает обычную ленту
+     */
+    public Page<VideoResponse> getRecommendedFeed(User user, Pageable pageable, Double randomPercentage) {
+        // Получаем рекомендованную ленту
+        Page<Video> recommendedVideos = recommendationService.getRecommendedFeed(user, pageable, randomPercentage);
+        
+        // Преобразуем в VideoResponse с метриками
+        return recommendedVideos.map(video -> {
+            VideoResponse response = videoMapper.toDTO(video);
+            // Загружаем метрики для каждого видео
+            try {
+                response.setMetrics(videoMetricService.getByVideoId(video.getId()));
+            } catch (Exception e) {
+                log.warn("Не удалось загрузить метрики для видео {}: {}", video.getId(), e.getMessage());
+                response.setMetrics(null);
+            }
+            return response;
+        });
     }
 
     public Video getEntityById(UUID id) {

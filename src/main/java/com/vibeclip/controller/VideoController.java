@@ -115,13 +115,27 @@ public class VideoController extends BaseController {
     }
 
     // Получение списка опубликованных видео с пагинацией
+    // Если передан параметр recommended=true и пользователь авторизован, возвращается рекомендованная лента
     @GetMapping
     public ResponseEntity<Page<VideoResponse>> getPublished(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Boolean recommended,
+            @RequestParam(required = false) Double randomPercentage,
+            Authentication authentication
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<VideoResponse> response = videoService.getPublished(pageable);
+        Page<VideoResponse> response;
+        
+        // Если запрошена рекомендованная лента и пользователь авторизован
+        if (Boolean.TRUE.equals(recommended) && authentication != null) {
+            User user = getCurrentUser(authentication);
+            response = videoService.getRecommendedFeed(user, pageable, randomPercentage);
+        } else {
+            // Обычная лента без рекомендаций
+            response = videoService.getPublished(pageable);
+        }
+        
         return ResponseEntity.ok(response);
     }
 
