@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
@@ -663,14 +664,22 @@ fun VideoFullScreenCard(
         // Просмотры в левом верхнем углу
         val currentMetrics = metrics ?: video.metrics
         if (currentMetrics != null) {
-            Column(
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(16.dp)
-                    .padding(top = 60.dp) // Отступ от шапки
+                    .padding(2.dp)
+                    .padding(top = 0.dp), // Отступ от шапки
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = null,
+                    tint = Color(0xFF9C88FF), // Фиолетовый цвет
+                    modifier = Modifier.size(18.dp)
+                )
                 Text(
-                    text = "${currentMetrics.viewCount} просмотров",
+                    text = formatCount(currentMetrics.viewCount),
                     color = Color(0xFF9C88FF), // Фиолетовый цвет
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
@@ -1013,7 +1022,7 @@ private fun CommentsBottomSheet(
                 .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+        ) {
                 OutlinedTextField(
                     value = commentText,
                     onValueChange = { commentText = it },
@@ -1112,7 +1121,7 @@ private fun CommentItem(comment: CommentResponse) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
-        ) {
+    ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "@${comment.username}",

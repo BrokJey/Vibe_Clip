@@ -18,7 +18,9 @@ interface ApiService {
     suspend fun getVideos(
         @Header("Authorization") token: String,
         @Query("page") page: Int,
-        @Query("size") size: Int
+        @Query("size") size: Int,
+        @Query("recommended") recommended: Boolean? = null,
+        @Query("randomPercentage") randomPercentage: Double? = null
     ): Response<VideoListResponse>
     
     @GET("videos/{id}")

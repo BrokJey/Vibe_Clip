@@ -33,7 +33,16 @@ class VideoViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
-            val result = videoRepository.getVideos(token, page, 20)
+            // Используем систему рекомендаций для главной ленты
+            // recommended=true включает персональные рекомендации на основе лайков пользователя
+            // randomPercentage=0.25 означает 25% случайных видео для разнообразия
+            val result = videoRepository.getVideos(
+                token = token, 
+                page = page, 
+                size = 20,
+                recommended = true, // Включаем систему рекомендаций
+                randomPercentage = 0.25 // 25% случайных видео
+            )
             
             result.onSuccess { response ->
                 _uiState.value = _uiState.value.copy(

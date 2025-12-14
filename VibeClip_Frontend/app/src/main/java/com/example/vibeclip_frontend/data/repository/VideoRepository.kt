@@ -12,9 +12,15 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class VideoRepository {
     private val apiService = RetrofitClient.apiService
     
-    suspend fun getVideos(token: String, page: Int = 0, size: Int = 20): Result<VideoListResponse> {
+    suspend fun getVideos(
+        token: String, 
+        page: Int = 0, 
+        size: Int = 20,
+        recommended: Boolean? = null,
+        randomPercentage: Double? = null
+    ): Result<VideoListResponse> {
         return try {
-            val response = apiService.getVideos("Bearer $token", page, size)
+            val response = apiService.getVideos("Bearer $token", page, size, recommended, randomPercentage)
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {

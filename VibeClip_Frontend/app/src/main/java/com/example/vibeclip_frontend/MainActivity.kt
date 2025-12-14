@@ -90,12 +90,12 @@ class MainActivity : ComponentActivity() {
                                                                                         colors = NavigationBarItemDefaults.colors(
                                                                                                 selectedIconColor = Color(0xFF9C88FF),
                                                                                                 selectedTextColor = Color(0xFF9C88FF),
-                                                                                                indicatorColor = Color(0xFF9C88FF).copy(alpha = 0.2f),
+                                                                                                indicatorColor = Color(0xFF9C88FF).copy(alpha = 0.3f),
                                                                                                 unselectedIconColor = Color.White.copy(alpha = 0.6f),
                                                                                                 unselectedTextColor = Color.White.copy(alpha = 0.6f)
                                                                                         )
                                                                                             )
-                                                                            }
+                                                                                                            }
                                                                     }
                                                             }
                                                     }
