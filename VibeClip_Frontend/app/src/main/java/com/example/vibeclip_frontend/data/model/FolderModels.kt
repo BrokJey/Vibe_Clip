@@ -3,7 +3,8 @@ package com.example.vibeclip_frontend.data.model
 data class FolderRequest(
     val name: String,
     val description: String? = null,
-    val preferences: FolderPreferenceRequest? = null
+    // Имя поля должно совпадать с backend DTO: preference
+    val preference: FolderPreferenceRequest? = null
 )
 
 data class FolderResponse(
@@ -20,25 +21,25 @@ data class FolderResponse(
 )
 
 data class FolderPreferenceRequest(
-    val allowedHashtags: List<String> = emptyList(),
-    val blockedHashtags: List<String> = emptyList(),
-    val allowedAuthors: List<String> = emptyList(),
-    val blockedAuthors: List<String> = emptyList(),
-    val minDuration: Int? = null,
-    val maxDuration: Int? = null,
-    val freshnessWeight: Double = 0.5,
-    val popularityWeight: Double = 0.5
+    val allowedHashtags: Set<String>? = null,
+    val blockedHashtags: Set<String>? = null,
+    val allowedAuthorIds: Set<String>? = null,
+    val blockedAuthorIds: Set<String>? = null,
+    val minDurationSeconds: Int? = null,
+    val maxDurationSeconds: Int? = null,
+    val freshnessWeight: Double? = null,
+    val popularityWeight: Double? = null
 )
 
 data class FolderPreferenceResponse(
-    val allowedHashtags: List<String>,
-    val blockedHashtags: List<String>,
-    val allowedAuthors: List<String>,
-    val blockedAuthors: List<String>,
-    val minDuration: Int?,
-    val maxDuration: Int?,
-    val freshnessWeight: Double,
-    val popularityWeight: Double
+    val allowedHashtags: Set<String>?,
+    val blockedHashtags: Set<String>?,
+    val allowedAuthorIds: Set<String>?,
+    val blockedAuthorIds: Set<String>?,
+    val minDurationSeconds: Int?,
+    val maxDurationSeconds: Int?,
+    val freshnessWeight: Double?,
+    val popularityWeight: Double?
 )
 
 data class FolderFeedResponse(

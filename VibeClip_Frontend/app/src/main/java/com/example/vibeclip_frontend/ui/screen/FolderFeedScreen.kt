@@ -38,7 +38,12 @@ fun FolderFeedScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Лента папки") },
+                title = {
+                    val name = uiState.folderName
+                    Text(
+                        text = if (name.isNotBlank()) "Лента папки $name" else "Лента папки",
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Назад")

@@ -78,7 +78,7 @@ class VideoRepository {
     suspend fun uploadVideo(
         token: String,
         filePart: MultipartBody.Part,
-        thumbnailPart: MultipartBody.Part,
+        thumbnailPart: MultipartBody.Part?,
         title: String?,
         description: String?,
         hashtags: String?,

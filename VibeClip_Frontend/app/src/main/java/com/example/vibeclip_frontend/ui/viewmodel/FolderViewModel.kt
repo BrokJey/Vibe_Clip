@@ -2,9 +2,9 @@ package com.example.vibeclip_frontend.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.vibeclip_frontend.data.model.FolderFeedResponse
 import com.example.vibeclip_frontend.data.model.FolderRequest
 import com.example.vibeclip_frontend.data.model.FolderResponse
+import com.example.vibeclip_frontend.data.model.FolderPreferenceRequest
 import com.example.vibeclip_frontend.data.repository.FolderRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,10 +38,32 @@ class FolderViewModel(
         }
     }
 
-    fun create(name: String, description: String) {
+    fun create(name: String, description: String, allowedHashtags: List<String>) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, created = null)
-            repo.create(token, FolderRequest(name = name, description = description.takeIf { it.isNotBlank() }))
+            val preference = if (allowedHashtags.isNotEmpty()) {
+                FolderPreferenceRequest(
+                    allowedHashtags = allowedHashtags.toSet(),
+                    blockedHashtags = emptySet(),
+                    allowedAuthorIds = emptySet(),
+                    blockedAuthorIds = emptySet(),
+                    minDurationSeconds = null,
+                    maxDurationSeconds = null,
+                    freshnessWeight = 0.5,
+                    popularityWeight = 0.5
+                )
+            } else {
+                null
+            }
+
+            repo.create(
+                token,
+                FolderRequest(
+                    name = name,
+                    description = description.takeIf { it.isNotBlank() },
+                    preference = preference
+                )
+            )
                 .onSuccess { folder ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -51,6 +73,86 @@ class FolderViewModel(
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                }
+        }
+    }
+
+    fun update(folderId: String, name: String, description: String, allowedHashtags: List<String>) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val preference = if (allowedHashtags.isNotEmpty()) {
+                FolderPreferenceRequest(
+                    allowedHashtags = allowedHashtags.toSet(),
+                    blockedHashtags = emptySet(),
+                    allowedAuthorIds = emptySet(),
+                    blockedAuthorIds = emptySet(),
+                    minDurationSeconds = null,
+                    maxDurationSeconds = null,
+                    freshnessWeight = 0.5,
+                    popularityWeight = 0.5
+                )
+            } else {
+                null
+            }
+
+            repo.update(
+                token,
+                folderId,
+                FolderRequest(
+                    name = name,
+                    description = description.takeIf { it.isNotBlank() },
+                    preference = preference
+                )
+            ).onSuccess { updated ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    folders = _uiState.value.folders.map { if (it.id == updated.id) updated else it }
+                )
+            }.onFailure { e ->
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+            }
+        }
+    }
+
+    fun delete(folderId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            repo.delete(token, folderId)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        folders = _uiState.value.folders.filterNot { it.id == folderId }
+                    )
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                }
+        }
+    }
+
+    fun archive(folderId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            repo.archive(token, folderId)
+                .onSuccess {
+                    // Архивированные папки можно скрывать из списка
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        folders = _uiState.value.folders.filterNot { it.id == folderId }
+                    )
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                }
+        }
+    }
+
+    fun regenerateFeed(folderId: String, limit: Int = 20) {
+        viewModelScope.launch {
+            // Просто дергаем regenerate, ошибки показываем, список папок не меняем
+            repo.regenerateFeed(token, folderId, limit)
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(errorMessage = e.message)
                 }
         }
     }

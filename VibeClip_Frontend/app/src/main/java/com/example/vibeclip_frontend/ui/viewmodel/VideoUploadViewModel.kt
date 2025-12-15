@@ -29,7 +29,7 @@ class VideoUploadViewModel(
         hashtags: String?,
         duration: Int,
         filePart: MultipartBody.Part,
-        thumbnailPart: MultipartBody.Part
+        thumbnailPart: MultipartBody.Part?
     ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, created = null)

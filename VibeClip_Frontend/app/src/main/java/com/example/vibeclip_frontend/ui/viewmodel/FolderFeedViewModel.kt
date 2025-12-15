@@ -13,7 +13,8 @@ data class FolderFeedUiState(
     val videos: List<FolderVideoResponse> = emptyList(),
     val page: Int = 0,
     val hasMore: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val folderName: String = ""
 )
 
 class FolderFeedViewModel(
@@ -38,7 +39,8 @@ class FolderFeedViewModel(
                         isLoading = false,
                         videos = if (page == 0) resp.videos else _uiState.value.videos + resp.videos,
                         page = resp.page,
-                        hasMore = resp.hasMore
+                        hasMore = resp.hasMore,
+                        folderName = resp.folderName
                     )
                 }
                 .onFailure { e ->

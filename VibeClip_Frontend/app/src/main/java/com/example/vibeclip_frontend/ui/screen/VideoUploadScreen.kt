@@ -132,17 +132,13 @@ fun VideoUploadScreen(
                     Toast.makeText(context, "Выберите видео", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                if (thumb == null) {
-                    Toast.makeText(context, "Выберите превью", Toast.LENGTH_SHORT).show()
-                    return@Button
-                }
                 if (dur == null || dur <= 0 || dur > 180) {
                     Toast.makeText(context, "Неверная длительность", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
 
                 val videoPart = buildFilePart(context, video, "file", "video/*")
-                val thumbPart = buildFilePart(context, thumb, "thumbnail", "image/*")
+                val thumbPart = thumb?.let { buildFilePart(context, it, "thumbnail", "image/*") }
 
                 viewModel.upload(
                     title = title,
@@ -156,7 +152,7 @@ fun VideoUploadScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
-            enabled = !uiState.isLoading && title.isNotBlank() && videoUri != null && thumbUri != null && durationError == null
+            enabled = !uiState.isLoading && title.isNotBlank() && videoUri != null && durationError == null
         ) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(
@@ -165,7 +161,7 @@ fun VideoUploadScreen(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text("Загрузить")
+                Text("Опубликовать")
             }
         }
     }

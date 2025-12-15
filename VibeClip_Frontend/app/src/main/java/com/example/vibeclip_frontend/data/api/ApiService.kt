@@ -40,7 +40,7 @@ interface ApiService {
     suspend fun uploadVideo(
         @Header("Authorization") token: String,
         @Part file: MultipartBody.Part,
-        @Part thumbnail: MultipartBody.Part,
+        @Part thumbnail: MultipartBody.Part?,
         @Part("title") title: String?,
         @Part("description") description: String?,
         @Part("hashtags") hashtags: String?,
@@ -93,6 +93,38 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: FolderRequest
     ): Response<FolderResponse>
+
+    @GET("folders/{id}")
+    suspend fun getFolder(
+        @Header("Authorization") token: String,
+        @Path("id") folderId: String
+    ): Response<FolderResponse>
+    
+    @PUT("folders/{id}")
+    suspend fun updateFolder(
+        @Header("Authorization") token: String,
+        @Path("id") folderId: String,
+        @Body request: FolderRequest
+    ): Response<FolderResponse>
+    
+    @DELETE("folders/{id}")
+    suspend fun deleteFolder(
+        @Header("Authorization") token: String,
+        @Path("id") folderId: String
+    ): Response<Unit>
+    
+    @POST("folders/{id}/archive")
+    suspend fun archiveFolder(
+        @Header("Authorization") token: String,
+        @Path("id") folderId: String
+    ): Response<Unit>
+    
+    @POST("folders/{id}/regenerate")
+    suspend fun regenerateFolderFeed(
+        @Header("Authorization") token: String,
+        @Path("id") folderId: String,
+        @Query("limit") limit: Int = 20
+    ): Response<FolderFeedResponse>
     
     @GET("folders/{folderId}/feed")
     suspend fun getFolderFeed(

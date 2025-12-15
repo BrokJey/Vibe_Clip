@@ -687,39 +687,82 @@ fun VideoFullScreenCard(
             }
         }
 
-        // Overlay info
+        // Overlay info (автор, название, описание, хэштеги)
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(16.dp)
         ) {
+            // Имя автора
             Text(
                 text = "@${video.authorUsername.orEmpty()}",
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
+            // Название без кавычек, крупнее
+            val rawTitle = video.title.orEmpty()
+            val titleText = rawTitle
+                .trim()
+                .trim('"')
+                // Убираем литералы переноса строки из заголовка
+                .replace("\\n", " ")
+                .replace("\\r", " ")
             Text(
-                text = video.title,
+                text = titleText,
                 color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
             )
-            if (!video.description.isNullOrBlank()) {
+
+            // Описание меньше по размеру и раскрывающееся при длине > 32 символов
+            val rawDescription = video.description.orEmpty()
+            val descriptionText = rawDescription
+                .trim()
+                .trim('"')
+                // Превращаем литералы \n из бэкенда в реальные переводы строки
+                .replace("\\r\\n", "\n")
+                .replace("\\n", "\n")
+                .replace("\\r", "")
+            if (descriptionText.isNotBlank()) {
+                var isDescriptionExpanded by remember { mutableStateOf(false) }
+                val isLongDescription = descriptionText.length > 32
+
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = video.description,
+                    text = descriptionText,
                     color = Color.White,
-                    fontSize = 14.sp
+                    fontSize = 12.sp,
+                    maxLines = if (!isLongDescription || isDescriptionExpanded) Int.MAX_VALUE else 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = if (isLongDescription) {
+                        Modifier.clickable { isDescriptionExpanded = !isDescriptionExpanded }
+                    } else {
+                        Modifier
+                    }
                 )
             }
+
             if (video.hashtags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = video.hashtags.joinToString(" ") { "#$it" },
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
+                // Нормализация хэштегов:
+                // - убираем кавычки
+                // - убираем лишние # в начале
+                // - гарантируем ровно один # в начале
+                val normalizedHashtags = video.hashtags.mapNotNull { raw ->
+                    val cleaned = raw.trim().trim('"')
+                    if (cleaned.isBlank()) return@mapNotNull null
+                    val withoutHashes = cleaned.trimStart('#')
+                    if (withoutHashes.isBlank()) return@mapNotNull null
+                    "#$withoutHashes"
+                }
+                if (normalizedHashtags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = normalizedHashtags.joinToString(" "),
+                        color = Color.White,
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
 
