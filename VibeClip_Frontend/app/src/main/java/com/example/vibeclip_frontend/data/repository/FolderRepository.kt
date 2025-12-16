@@ -50,9 +50,9 @@ class FolderRepository {
         else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
     }
     
-    suspend fun feed(token: String, folderId: String, page: Int = 0, size: Int = 20): Result<FolderFeedResponse> =
+    suspend fun feed(token: String, folderId: String, limit: Int = 20): Result<FolderFeedResponse> =
         runCatching {
-            val resp = apiService.getFolderFeed("Bearer $token", folderId, page, size)
+            val resp = apiService.getFolderFeed("Bearer $token", folderId, limit)
             if (resp.isSuccessful && resp.body() != null) resp.body()!!
             else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
         }

@@ -130,8 +130,7 @@ interface ApiService {
     suspend fun getFolderFeed(
         @Header("Authorization") token: String,
         @Path("folderId") folderId: String,
-        @Query("page") page: Int,
-        @Query("size") size: Int
+        @Query("limit") limit: Int = 20
     ): Response<FolderFeedResponse>
     
     // User endpoints

@@ -30,14 +30,14 @@ class FolderFeedViewModel(
         loadPage()
     }
 
-    fun loadPage(page: Int = 0) {
+    fun loadPage(limit: Int = 20) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            repo.feed(token, folderId, page, 10)
+            repo.feed(token, folderId, limit)
                 .onSuccess { resp ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        videos = if (page == 0) resp.videos else _uiState.value.videos + resp.videos,
+                        videos = resp.videos,
                         page = resp.page,
                         hasMore = resp.hasMore,
                         folderName = resp.folderName
@@ -50,8 +50,10 @@ class FolderFeedViewModel(
     }
 
     fun loadMore() {
+        // Для папок бэкенд всегда возвращает непоказанные видео
+        // Перегенерируем ленту, запрашивая больше видео
         if (!_uiState.value.isLoading && _uiState.value.hasMore) {
-            loadPage(_uiState.value.page + 1)
+            loadPage(_uiState.value.videos.size + 20) // Запрашиваем больше видео
         }
     }
 }
