@@ -79,7 +79,12 @@ fun FoldersScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Папки") }) }
+        topBar = { 
+            TopAppBar(
+                modifier = Modifier.padding(top = 8.dp),
+                title = { Text("Папки") }
+            )
+        }
     ) { padding ->
         Column(
             modifier = Modifier

@@ -49,6 +49,7 @@ fun VideoViewScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.padding(top = 8.dp),
                 title = { Text("Видео") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

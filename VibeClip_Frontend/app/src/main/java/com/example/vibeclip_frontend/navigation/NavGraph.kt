@@ -4,12 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.vibeclip_frontend.ui.screen.AboutScreen
 import com.example.vibeclip_frontend.ui.screen.FeedScreen
 import com.example.vibeclip_frontend.ui.screen.FolderFeedScreen
 import com.example.vibeclip_frontend.ui.screen.FoldersScreen
 import com.example.vibeclip_frontend.ui.screen.LoginScreen
 import com.example.vibeclip_frontend.ui.screen.ProfileScreen
 import com.example.vibeclip_frontend.ui.screen.RegisterScreen
+import com.example.vibeclip_frontend.ui.screen.SingleVideoScreen
 import com.example.vibeclip_frontend.ui.screen.VideoUploadScreen
 
 sealed class Screen(val route: String) {
@@ -19,9 +21,15 @@ sealed class Screen(val route: String) {
     object Upload : Screen("upload")
     object Folders : Screen("folders")
     object Profile : Screen("profile")
+    object About : Screen("about")
     data class FolderFeed(val folderId: String) : Screen("folder_feed/$folderId") {
         companion object {
             const val routePattern = "folder_feed/{folderId}"
+        }
+    }
+    data class VideoView(val videoId: String) : Screen("video/$videoId") {
+        companion object {
+            const val routePattern = "video/{videoId}"
         }
     }
 }
@@ -76,6 +84,9 @@ fun NavGraph(
                         navController.navigate(Screen.Login.route) {
                             popUpTo(Screen.Feed.route) { inclusive = true }
                         }
+                    },
+                    onAboutClick = {
+                        navController.navigate(Screen.About.route)
                     }
                 )
             }
@@ -114,8 +125,31 @@ fun NavGraph(
 
         composable(Screen.Profile.route) {
             if (token != null) {
-                ProfileScreen(token = token, onLogout = onLogout)
+                ProfileScreen(
+                    token = token,
+                    onLogout = onLogout,
+                    onVideoClick = { video ->
+                        navController.navigate(Screen.VideoView(video.id).route)
+                    }
+                )
             }
+        }
+        
+        composable(Screen.VideoView.routePattern) { backStackEntry ->
+            val videoId = backStackEntry.arguments?.getString("videoId")
+            if (token != null && videoId != null) {
+                SingleVideoScreen(
+                    token = token,
+                    videoId = videoId,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+        
+        composable(Screen.About.route) {
+            AboutScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

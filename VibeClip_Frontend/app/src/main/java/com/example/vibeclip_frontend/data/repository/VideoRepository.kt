@@ -96,6 +96,41 @@ class VideoRepository {
         if (resp.isSuccessful && resp.body() != null) resp.body()!!
         else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
     }
+    
+    suspend fun getMyVideos(
+        token: String,
+        page: Int = 0,
+        size: Int = 20,
+        status: String? = null
+    ): Result<VideoListResponse> = runCatching {
+        val resp = apiService.getMyVideos("Bearer $token", page, size, status)
+        if (resp.isSuccessful && resp.body() != null) {
+            resp.body()!!
+        } else {
+            val errorBody = resp.errorBody()?.string() ?: ""
+            val errorMsg = if (errorBody.isNotBlank()) errorBody else resp.message()
+            throw Exception("Failed to fetch my videos: $errorMsg (Code: ${resp.code()})")
+        }
+    }
+    
+    suspend fun updateVideo(
+        token: String,
+        id: String,
+        request: VideoRequest
+    ): Result<VideoResponse> = runCatching {
+        val resp = apiService.updateVideo("Bearer $token", id, request)
+        if (resp.isSuccessful && resp.body() != null) resp.body()!!
+        else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
+    }
+    
+    suspend fun deleteVideo(
+        token: String,
+        id: String
+    ): Result<Unit> = runCatching {
+        val resp = apiService.deleteVideo("Bearer $token", id)
+        if (resp.isSuccessful) Unit
+        else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
+    }
 }
 
 
