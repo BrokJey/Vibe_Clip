@@ -34,7 +34,7 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: VideoRequest
     ): Response<VideoResponse>
-    
+
     @Multipart
     @POST("videos/upload")
     suspend fun uploadVideo(
@@ -49,6 +49,27 @@ interface ApiService {
     
     @GET("videos/{id}/share-url")
     suspend fun getShareUrl(@Path("id") id: String): Response<Map<String, String>>
+    
+    @GET("videos/my")
+    suspend fun getMyVideos(
+        @Header("Authorization") token: String,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20,
+        @Query("status") status: String? = null
+    ): Response<VideoListResponse>
+    
+    @PUT("videos/{id}")
+    suspend fun updateVideo(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body request: VideoRequest
+    ): Response<VideoResponse>
+    
+    @DELETE("videos/{id}")
+    suspend fun deleteVideo(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<Unit>
     
     // Reaction endpoints
     @POST("reactions")

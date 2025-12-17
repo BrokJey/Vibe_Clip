@@ -73,6 +73,7 @@ import kotlinx.coroutines.launch
 fun FeedScreen(
     token: String,
     onLogout: () -> Unit,
+    onAboutClick: () -> Unit = {},
     viewModel: VideoViewModel = viewModel { VideoViewModel(VideoRepository(), token) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -92,10 +93,16 @@ fun FeedScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("VibeClip") },
+                modifier = Modifier.padding(top = 8.dp),
+                title = { 
+                    Text(
+                        text = "VibeClip",
+                        modifier = Modifier.clickable { onAboutClick() }
+                    )
+                },
                 actions = {
                     TextButton(onClick = onLogout) {
-                        Text("Logout")
+                        Text("Выход")
                     }
                 }
             )
@@ -756,13 +763,13 @@ fun VideoFullScreenCard(
                     "#$withoutHashes"
                 }
                 if (normalizedHashtags.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
                         text = normalizedHashtags.joinToString(" "),
-                        color = Color.White,
-                        fontSize = 14.sp
-                    )
-                }
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+            }
             }
         }
 
@@ -907,8 +914,8 @@ private fun ReactionButton(
                 modifier = Modifier.size(24.dp)
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
             text = formatCount(count),
             color = Color.White,
             fontSize = 12.sp,
@@ -1025,11 +1032,11 @@ private fun CommentsBottomSheet(
                         ) {
                             Text(
                                 text = "Ошибка: $error",
-                                color = Color.White,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+            }
+        }
                     comments.isEmpty() -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -1060,7 +1067,7 @@ private fun CommentsBottomSheet(
             
             // Поле ввода комментария
             Row(
-                modifier = Modifier
+            modifier = Modifier
                     .fillMaxWidth()
                 .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,

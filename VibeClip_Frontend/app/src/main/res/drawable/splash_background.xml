@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Фон splash screen -->
+    <item android:drawable="@android:color/black" />
+    
+    <!-- Логотип по центру -->
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/vc_logo" />
+    </item>
+</layer-list>
+

@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.vibeclip_frontend.di.AppModule
 import com.example.vibeclip_frontend.navigation.NavGraph
 import com.example.vibeclip_frontend.navigation.Screen
@@ -64,15 +65,17 @@ class MainActivity : ComponentActivity() {
                                                                         containerColor = Color.Black,
                                                                         contentColor = Color.White
                                                                 ) {
-                                                                        val currentRoute = navController.currentDestination?.route
+                                                                        val navBackStackEntry by navController.currentBackStackEntryAsState()
+                                                                        val currentRoute = navBackStackEntry?.destination?.route
                                                                         bottomItems.forEach { screen ->
                                                                                 val isSelected = currentRoute == screen.route
                                                                                 NavigationBarItem(
                                                                                         selected = isSelected,
                                                                                         onClick = {
                                                                                                 navController.navigate(screen.route) {
-                                                                                                        popUpTo(Screen.Feed.route) { inclusive = false }
+                                                                                                        // Убираем popUpTo для корректной навигации между основными вкладками
                                                                                                         launchSingleTop = true
+                                                                                                        restoreState = true
                                                                                                     }
                                                                                             },
                                                                                         label = { 
@@ -127,8 +130,10 @@ private fun screenLabel(screen: Screen): String = when (screen) {
         Screen.Upload -> "Загрузка"
         Screen.Folders -> "Папки"
         Screen.Profile -> "Профиль"
+        Screen.About -> "О разработчиках"
         Screen.Login, Screen.Register -> screen.route
         is Screen.FolderFeed -> "Папка"
+        is Screen.VideoView -> "Видео"
     }
 
 @Composable
