@@ -5,12 +5,15 @@ import com.vibeclip.dto.video.VideoRequest;
 import com.vibeclip.dto.video.VideoResponse;
 import com.vibeclip.entity.Video;
 import com.vibeclip.entity.VideoMetric;
+import com.vibeclip.util.HashtagUtil;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * MapStruct маппер для Video entity ↔ DTO
@@ -27,7 +30,22 @@ public interface VideoMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "hashtags", source = "hashtags", qualifiedByName = "normalizeHashtags")
     Video fromDTO(VideoRequest request);
+
+    /**
+     * Нормализует множество хэштегов
+     */
+    @Named("normalizeHashtags")
+    default Set<String> normalizeHashtags(Set<String> hashtags) {
+        if (hashtags == null || hashtags.isEmpty()) {
+            return Set.of();
+        }
+        return hashtags.stream()
+                .map(HashtagUtil::normalize)
+                .filter(h -> h != null && !h.isEmpty())
+                .collect(Collectors.toSet());
+    }
 
     /**
      * Преобразует Video entity в VideoResponse

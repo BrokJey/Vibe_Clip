@@ -63,6 +63,11 @@ public interface VideoMetricRepository extends JpaRepository<VideoMetric, UUID> 
     @Modifying
     @Query("UPDATE VideoMetric vm SET vm.shareCount = vm.shareCount + 1 WHERE vm.video.id = :videoId")
     void incrementShareCount(@Param("videoId") UUID videoId);
+
+    /**
+     * Удаляет метрики видео
+     */
+    void deleteByVideoId(UUID videoId);
 }
 
 

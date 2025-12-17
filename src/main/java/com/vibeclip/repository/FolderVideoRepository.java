@@ -97,6 +97,11 @@ public interface FolderVideoRepository extends JpaRepository<FolderVideo, UUID> 
      * Подсчитывает количество видео в папке
      */
     long countByFolder(Folder folder);
+
+    /**
+     * Удаляет все связи по видео
+     */
+    void deleteByVideo(Video video);
 }
 
 

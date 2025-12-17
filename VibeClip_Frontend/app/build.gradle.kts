@@ -21,7 +21,7 @@ android {
         
         // Добавляем разрешение на интернет
         // ВАЖНО: укажите реальный IP/домен бэкенда, чтобы плеер собирал полный URL
-        buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.15:8000/api/v1/\"")
+        buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.11:8000/api/v1/\"")
     }
 
     buildTypes {

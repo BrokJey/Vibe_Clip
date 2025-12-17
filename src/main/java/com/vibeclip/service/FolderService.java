@@ -109,9 +109,19 @@ public class FolderService {
     @Transactional
     public void delete(UUID id, User owner) {
         Folder folder = getEntityById(id, owner);
-
-        folder.setStatus(FolderStatus.DELETED);
-        folderRepository.save(folder);
+        
+        log.info("Начинается удаление папки {} ({})", folder.getId(), folder.getName());
+        
+        // Полностью удаляем папку из БД
+        // Каскадное удаление автоматически удалит:
+        // - folder_videos (связи с видео)
+        // - folder_allowed_hashtags
+        // - folder_blocked_hashtags
+        // - folder_allowed_authors
+        // - folder_blocked_authors
+        folderRepository.delete(folder);
+        
+        log.info("Папка {} ({}) полностью удалена", id, folder.getName());
     }
 
     @Transactional

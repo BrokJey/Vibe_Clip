@@ -116,12 +116,10 @@ public class AdminController extends BaseController {
         return ResponseEntity.ok(response);
     }
 
-    // Удаление видео администратором (без проверки авторства)
+    // Удаление видео администратором (полное удаление без проверки авторства)
     @DeleteMapping("/videos/{id}")
     public ResponseEntity<Void> deleteVideo(@PathVariable UUID id) {
-        Video video = videoService.getEntityById(id);
-        video.setStatus(VideoStatus.DELETED);
-        videoRepository.save(video);
+        videoService.deleteByAdmin(id);
         return ResponseEntity.noContent().build();
     }
 }

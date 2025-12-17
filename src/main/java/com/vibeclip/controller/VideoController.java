@@ -68,9 +68,9 @@ public class VideoController extends BaseController {
         return ResponseEntity.ok(response);
     }
 
-    // Обновление информации о видео
+    // Обновление информации о видео (только свое видео)
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('CREATOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<VideoResponse> update(
             @PathVariable UUID id,
             @Valid @RequestBody VideoRequest request,
@@ -81,18 +81,18 @@ public class VideoController extends BaseController {
         return ResponseEntity.ok(response);
     }
 
-    // Удаление видео (мягкое удаление - изменение статуса на DELETED)
+    // Удаление видео (полное удаление из БД и файлов, только свое видео)
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('CREATOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication authentication) {
         User author = getCurrentUser(authentication);
         videoService.delete(id, author);
         return ResponseEntity.noContent().build();
     }
 
-    // Публикация видео (изменение статуса на PUBLISHED)
+    // Публикация видео (изменение статуса на PUBLISHED, только свое видео)
     @PostMapping("/{id}/publish")
-    @PreAuthorize("hasRole('CREATOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<VideoResponse> publish(@PathVariable UUID id, Authentication authentication) {
         User author = getCurrentUser(authentication);
         VideoResponse response = videoService.publish(id, author);
@@ -101,7 +101,7 @@ public class VideoController extends BaseController {
 
     // Получение списка видео текущего пользователя с фильтрацией по статусу
     @GetMapping("/my")
-    @PreAuthorize("hasRole('CREATOR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<Page<VideoResponse>> getMyVideos(
             @RequestParam(required = false) VideoStatus status,
             @RequestParam(defaultValue = "0") int page,
@@ -153,13 +153,56 @@ public class VideoController extends BaseController {
     ) {
         User author = getCurrentUser(authentication);
 
-        // Парсим хэштеги из строки (если переданы как строка через @RequestPart)
+        // Парсим и нормализуем хэштеги из строки (если переданы как строка через @RequestPart)
         java.util.Set<String> hashtagSet = null;
         if (hashtags != null && !hashtags.trim().isEmpty()) {
-            hashtagSet = java.util.Arrays.stream(hashtags.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .collect(java.util.stream.Collectors.toSet());
+            String trimmed = hashtags.trim();
+            // Если строка начинается с [ и заканчивается ], это JSON массив - парсим как массив
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                // Удаляем квадратные скобки и парсим как JSON массив
+                String arrayContent = trimmed.substring(1, trimmed.length() - 1).trim();
+                if (!arrayContent.isEmpty()) {
+                    // Парсим элементы массива, учитывая что они могут быть в кавычках
+                    hashtagSet = java.util.Arrays.stream(arrayContent.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            // Агрессивно удаляем все кавычки (одинарные и двойные) в начале и конце
+                            .map(s -> {
+                                // Удаляем все кавычки в начале
+                                while (!s.isEmpty() && (s.startsWith("\"") || s.startsWith("'"))) {
+                                    s = s.substring(1).trim();
+                                }
+                                // Удаляем все кавычки в конце
+                                while (!s.isEmpty() && (s.endsWith("\"") || s.endsWith("'"))) {
+                                    s = s.substring(0, s.length() - 1).trim();
+                                }
+                                return s;
+                            })
+                            .map(com.vibeclip.util.HashtagUtil::normalize)
+                            .filter(h -> h != null && !h.isEmpty())
+                            .collect(java.util.stream.Collectors.toSet());
+                }
+            } else {
+                // Обычный формат через запятую
+                hashtagSet = java.util.Arrays.stream(trimmed.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        // Агрессивно удаляем все кавычки перед нормализацией
+                        .map(s -> {
+                            // Удаляем все кавычки в начале
+                            while (!s.isEmpty() && (s.startsWith("\"") || s.startsWith("'"))) {
+                                s = s.substring(1).trim();
+                            }
+                            // Удаляем все кавычки в конце
+                            while (!s.isEmpty() && (s.endsWith("\"") || s.endsWith("'"))) {
+                                s = s.substring(0, s.length() - 1).trim();
+                            }
+                            return s;
+                        })
+                        .map(com.vibeclip.util.HashtagUtil::normalize)
+                        .filter(h -> h != null && !h.isEmpty())
+                        .collect(java.util.stream.Collectors.toSet());
+            }
         }
 
         VideoResponse response = videoService.createWithFiles(

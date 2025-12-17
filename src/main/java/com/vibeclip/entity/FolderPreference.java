@@ -1,10 +1,12 @@
 package com.vibeclip.entity;
 
+import com.vibeclip.util.HashtagUtil;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Настройки рекомендаций для папки (Embeddable)
@@ -35,6 +37,34 @@ public class FolderPreference {
     @Column(name = "hashtag")
     @Builder.Default
     private Set<String> blockedHashtags = new HashSet<>();
+
+    /**
+     * Переопределяем сеттер для allowedHashtags для автоматической нормализации
+     */
+    public void setAllowedHashtags(Set<String> allowedHashtags) {
+        if (allowedHashtags == null) {
+            this.allowedHashtags = new HashSet<>();
+        } else {
+            this.allowedHashtags = allowedHashtags.stream()
+                    .map(HashtagUtil::normalize)
+                    .filter(h -> h != null && !h.isEmpty())
+                    .collect(Collectors.toSet());
+        }
+    }
+
+    /**
+     * Переопределяем сеттер для blockedHashtags для автоматической нормализации
+     */
+    public void setBlockedHashtags(Set<String> blockedHashtags) {
+        if (blockedHashtags == null) {
+            this.blockedHashtags = new HashSet<>();
+        } else {
+            this.blockedHashtags = blockedHashtags.stream()
+                    .map(HashtagUtil::normalize)
+                    .filter(h -> h != null && !h.isEmpty())
+                    .collect(Collectors.toSet());
+        }
+    }
 
     /**
      * ID авторов, чьи видео разрешены (если пусто - все разрешены)

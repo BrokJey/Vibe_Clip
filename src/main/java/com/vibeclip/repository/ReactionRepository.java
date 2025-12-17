@@ -75,6 +75,11 @@ public interface ReactionRepository extends JpaRepository<Reaction, UUID> {
      */
     @Query("SELECT r FROM Reaction r WHERE r.user.id = :userId AND r.video.id = :videoId")
     List<Reaction> findByUserIdAndVideoId(@Param("userId") UUID userId, @Param("videoId") UUID videoId);
+
+    /**
+     * Удаляет все реакции на видео
+     */
+    void deleteByVideo(Video video);
 }
 
 

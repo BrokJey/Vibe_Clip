@@ -63,31 +63,32 @@ public class RecommendationService {
         List<Video> newCandidates = candidates.getContent().stream()
                 .filter(video -> !existingVideoIds.contains(video.getId()))
                 .collect(Collectors.toList());
+        log.debug("После исключения существующих видео осталось {} новых кандидатов", newCandidates.size());
 
-        // Ранжируем и выбираем лучшие
-        List<FolderVideo> folderVideos = newCandidates.stream()
-                .map(video -> {
-                    double score = calculateScore(video, preference);
-                    return FolderVideo.builder()
-                            .folder(folder)
-                            .video(video)
-                            .score(score)
-                            .position(0)
-                            .shown(false)
-                            .build();
-                })
-                .sorted((fv1, fv2) -> Double.compare(fv2.getScore(), fv1.getScore()))
+        // Перемешиваем кандидатов случайным образом
+        java.util.Collections.shuffle(newCandidates);
+        
+        // Ограничиваем лимитом после перемешивания
+        newCandidates = newCandidates.stream()
                 .limit(limit)
                 .collect(Collectors.toList());
 
-        // Устанавливаем позиции
+        // Создаем FolderVideo записи в случайном порядке
         int maxPosition = existingFolderVideos.stream()
                 .mapToInt(FolderVideo::getPosition)
                 .max()
                 .orElse(-1);
         
-        for (int i = 0; i < folderVideos.size(); i++) {
-            folderVideos.get(i).setPosition(maxPosition + 1 + i);
+        List<FolderVideo> folderVideos = new java.util.ArrayList<>();
+        for (int i = 0; i < newCandidates.size(); i++) {
+            FolderVideo folderVideo = FolderVideo.builder()
+                    .folder(folder)
+                    .video(newCandidates.get(i))
+                    .score(1.0) // Простой score, не используется для ранжирования
+                    .position(maxPosition + 1 + i)
+                    .shown(false)
+                    .build();
+            folderVideos.add(folderVideo);
         }
 
         // Сохраняем в БД только новые записи
@@ -221,7 +222,7 @@ public class RecommendationService {
     }
 
     /**
-     * Получает ленту папки (непоказанные видео, отсортированные по score)
+     * Получает ленту папки (непоказанные видео, в случайном порядке)
      */
     public List<FolderVideo> getFeedForFolder(Folder folder, int limit) {
         List<FolderVideo> folderVideos = folderVideoRepository
@@ -234,6 +235,8 @@ public class RecommendationService {
                     .findByFolderAndShownFalseOrderByScoreDesc(folder);
         }
 
+        // Перемешиваем видео случайным образом и ограничиваем лимитом
+        java.util.Collections.shuffle(folderVideos);
         return folderVideos.stream()
                 .limit(limit)
                 .collect(Collectors.toList());

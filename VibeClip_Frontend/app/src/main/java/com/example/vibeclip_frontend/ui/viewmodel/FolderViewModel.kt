@@ -14,7 +14,8 @@ data class FolderUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val folders: List<FolderResponse> = emptyList(),
-    val created: FolderResponse? = null
+    val created: FolderResponse? = null,
+    val shuffledFolders: List<FolderResponse> = emptyList() // Рандомизированный список для бесконечной прокрутки
 )
 
 class FolderViewModel(
@@ -30,7 +31,13 @@ class FolderViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             repo.list(token)
                 .onSuccess { folders ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, folders = folders)
+                    // Рандомизируем список папок для бесконечной прокрутки
+                    val shuffled = folders.shuffled()
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false, 
+                        folders = folders,
+                        shuffledFolders = shuffled
+                    )
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
@@ -65,10 +72,13 @@ class FolderViewModel(
                 )
             )
                 .onSuccess { folder ->
+                    val updatedFolders = listOf(folder) + _uiState.value.folders
+                    val shuffled = updatedFolders.shuffled()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         created = folder,
-                        folders = listOf(folder) + _uiState.value.folders
+                        folders = updatedFolders,
+                        shuffledFolders = shuffled
                     )
                 }
                 .onFailure { e ->
@@ -104,9 +114,12 @@ class FolderViewModel(
                     preference = preference
                 )
             ).onSuccess { updated ->
+                val updatedFolders = _uiState.value.folders.map { if (it.id == updated.id) updated else it }
+                val shuffled = updatedFolders.shuffled()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    folders = _uiState.value.folders.map { if (it.id == updated.id) updated else it }
+                    folders = updatedFolders,
+                    shuffledFolders = shuffled
                 )
             }.onFailure { e ->
                 _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
@@ -119,9 +132,12 @@ class FolderViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             repo.delete(token, folderId)
                 .onSuccess {
+                    val updatedFolders = _uiState.value.folders.filterNot { it.id == folderId }
+                    val shuffled = updatedFolders.shuffled()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        folders = _uiState.value.folders.filterNot { it.id == folderId }
+                        folders = updatedFolders,
+                        shuffledFolders = shuffled
                     )
                 }
                 .onFailure { e ->
@@ -136,9 +152,12 @@ class FolderViewModel(
             repo.archive(token, folderId)
                 .onSuccess {
                     // Архивированные папки можно скрывать из списка
+                    val updatedFolders = _uiState.value.folders.filterNot { it.id == folderId }
+                    val shuffled = updatedFolders.shuffled()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        folders = _uiState.value.folders.filterNot { it.id == folderId }
+                        folders = updatedFolders,
+                        shuffledFolders = shuffled
                     )
                 }
                 .onFailure { e ->

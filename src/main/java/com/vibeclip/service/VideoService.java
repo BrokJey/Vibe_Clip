@@ -33,6 +33,9 @@ public class VideoService {
     private final FileStorageService fileStorageService;
     private final VideoMetricService videoMetricService;
     private final RecommendationService recommendationService;
+    private final com.vibeclip.repository.CommentRepository commentRepository;
+    private final com.vibeclip.repository.ReactionRepository reactionRepository;
+    private final com.vibeclip.repository.FolderVideoRepository folderVideoRepository;
 
 
     @Transactional
@@ -41,7 +44,7 @@ public class VideoService {
         video.setAuthor(author);
         video.setStatus(VideoStatus.PUBLISHED);
 
-        // Устанавливаем хэштеги, если они есть
+        // Устанавливаем хэштеги, если они есть (нормализация происходит в addHashtag)
         if (request.getHashtags() != null) {
             request.getHashtags().forEach(video::addHashtag);
         }
@@ -115,6 +118,7 @@ public class VideoService {
         }
         if (request.getHashtags() != null) {
             video.getHashtags().clear();
+            // Нормализация происходит в addHashtag
             request.getHashtags().forEach(video::addHashtag);
         }
 
@@ -134,8 +138,68 @@ public class VideoService {
     public void delete(UUID id, User author) {
         Video video = videoRepository.findByIdAndAuthorId(id, author.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Видео не найдено или вы не автор"));
-        video.setStatus(VideoStatus.DELETED);
-        videoRepository.save(video);
+        deleteVideoCompletely(video);
+    }
+
+    @Transactional
+    public void deleteByAdmin(UUID id) {
+        Video video = videoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Видео не найдено: " + id));
+        deleteVideoCompletely(video);
+    }
+
+    private void deleteVideoCompletely(Video video) {
+        log.info("Начинается удаление видео {} ({})", video.getId(), video.getTitle());
+        
+        // 1. Удаляем метрики
+        try {
+            videoMetricRepository.deleteByVideoId(video.getId());
+            log.debug("Метрики видео {} удалены", video.getId());
+        } catch (Exception e) {
+            log.warn("Не удалось удалить метрики видео {}: {}", video.getId(), e.getMessage());
+        }
+        
+        // 2. Удаляем комментарии
+        try {
+            commentRepository.deleteByVideo(video);
+            log.debug("Комментарии к видео {} удалены", video.getId());
+        } catch (Exception e) {
+            log.warn("Не удалось удалить комментарии к видео {}: {}", video.getId(), e.getMessage());
+        }
+        
+        // 3. Удаляем реакции
+        try {
+            reactionRepository.deleteByVideo(video);
+            log.debug("Реакции на видео {} удалены", video.getId());
+        } catch (Exception e) {
+            log.warn("Не удалось удалить реакции на видео {}: {}", video.getId(), e.getMessage());
+        }
+        
+        // 4. Удаляем связи с папками
+        try {
+            folderVideoRepository.deleteByVideo(video);
+            log.debug("Связи видео {} с папками удалены", video.getId());
+        } catch (Exception e) {
+            log.warn("Не удалось удалить связи видео {} с папками: {}", video.getId(), e.getMessage());
+        }
+        
+        // 5. Удаляем файлы (видео и превью)
+        try {
+            if (video.getVideoUrl() != null) {
+                fileStorageService.deleteFile(video.getVideoUrl());
+                log.debug("Файл видео {} удален: {}", video.getId(), video.getVideoUrl());
+            }
+            if (video.getThumbnailUrl() != null) {
+                fileStorageService.deleteFile(video.getThumbnailUrl());
+                log.debug("Превью видео {} удалено: {}", video.getId(), video.getThumbnailUrl());
+            }
+        } catch (Exception e) {
+            log.error("Ошибка при удалении файлов видео {}: {}", video.getId(), e.getMessage());
+        }
+        
+        // 6. Удаляем само видео из БД
+        videoRepository.delete(video);
+        log.info("Видео {} ({}) полностью удалено", video.getId(), video.getTitle());
     }
 
     @Transactional

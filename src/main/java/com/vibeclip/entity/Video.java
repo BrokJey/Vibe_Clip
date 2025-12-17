@@ -1,5 +1,6 @@
 package com.vibeclip.entity;
 
+import com.vibeclip.util.HashtagUtil;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -48,6 +49,20 @@ public class Video {
     @Builder.Default
     private Set<String> hashtags = new HashSet<>();
 
+    /**
+     * Переопределяем сеттер для автоматической нормализации всех хэштегов
+     */
+    public void setHashtags(Set<String> hashtags) {
+        if (hashtags == null) {
+            this.hashtags = new HashSet<>();
+        } else {
+            this.hashtags = hashtags.stream()
+                    .map(HashtagUtil::normalize)
+                    .filter(h -> h != null && !h.isEmpty())
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+    }
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -63,9 +78,15 @@ public class Video {
 
     /**
      * Вспомогательный метод для добавления хэштега
+     * Автоматически нормализует хэштег перед добавлением
      */
     public void addHashtag(String hashtag) {
-        this.hashtags.add(hashtag);
+        if (hashtag != null) {
+            String normalized = HashtagUtil.normalize(hashtag);
+            if (normalized != null && !normalized.isEmpty()) {
+                this.hashtags.add(normalized);
+            }
+        }
     }
 
     /**
