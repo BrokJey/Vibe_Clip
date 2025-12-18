@@ -17,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vibeclip_frontend.data.repository.FolderRepository
 import com.example.vibeclip_frontend.ui.screen.VideoFullScreenCard
@@ -39,7 +38,6 @@ fun FolderFeedScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.padding(top = 8.dp),
                 title = {
                     val name = uiState.folderName
                     Text(

@@ -72,11 +72,25 @@ import kotlinx.coroutines.launch
 @Composable
 fun FeedScreen(
     token: String,
+    initialVideoId: String? = null,
     onLogout: () -> Unit,
-    onAboutClick: () -> Unit = {},
     viewModel: VideoViewModel = viewModel { VideoViewModel(VideoRepository(), token) }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val videoRepository = remember { VideoRepository() }
+    
+    // Если передан initialVideoId, загружаем это видео и добавляем в начало списка
+    LaunchedEffect(initialVideoId) {
+        if (initialVideoId != null && uiState.videos.none { it.id == initialVideoId }) {
+            // Видео нет в списке, загружаем его
+            videoRepository.getVideo(token, initialVideoId)
+                .onSuccess { video ->
+                    // Добавляем видео в начало списка через viewModel
+                    viewModel.addVideoToStart(video)
+                }
+        }
+    }
+    
     // Бесконечная лента: используем большое число страниц для циклического прокручивания
     val pageCount = if (uiState.videos.isNotEmpty()) {
         // Используем большое число, чтобы создать эффект бесконечности
@@ -90,19 +104,27 @@ fun FeedScreen(
         pageCount = { pageCount }
     )
     
+    // Находим индекс видео и переключаемся на него после загрузки
+    LaunchedEffect(initialVideoId, uiState.videos.size) {
+        if (initialVideoId != null && uiState.videos.isNotEmpty()) {
+            val index = uiState.videos.indexOfFirst { it.id == initialVideoId }
+            if (index >= 0) {
+                // Находим позицию в бесконечной ленте (ближайшая к началу)
+                val targetPage = index
+                if (pagerState.currentPage != targetPage) {
+                    pagerState.animateScrollToPage(targetPage)
+                }
+            }
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
-                modifier = Modifier.padding(top = 8.dp),
-                title = { 
-                    Text(
-                        text = "VibeClip",
-                        modifier = Modifier.clickable { onAboutClick() }
-                    )
-                },
+                title = { Text("VibeClip") },
                 actions = {
                     TextButton(onClick = onLogout) {
-                        Text("Выход")
+                        Text("Logout")
                     }
                 }
             )
@@ -165,19 +187,36 @@ fun FeedScreen(
                             .padding(padding)
                     ) { page ->
                         // Вычисляем реальный индекс видео для бесконечной ленты
-                        val videoIndex = if (uiState.videos.isNotEmpty()) {
-                            page % uiState.videos.size
+                        if (uiState.videos.isEmpty()) {
+                            // Если список пуст, показываем пустой экран
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Нет видео", color = Color.White)
+                            }
                         } else {
-                            0
+                            val videoIndex = page % uiState.videos.size
+                            // Проверяем, что индекс валидный
+                            if (videoIndex >= 0 && videoIndex < uiState.videos.size) {
+                                val video = uiState.videos[videoIndex]
+                                // Проверяем, является ли это видео активным (текущая страница)
+                                val isActive = page == pagerState.currentPage
+                                VideoFullScreenCard(
+                                    video = video,
+                                    isActive = isActive,
+                                    token = token
+                                )
+                            } else {
+                                // Защита от выхода за границы
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Ошибка загрузки видео", color = Color.White)
+                                }
+                            }
                         }
-                        val video = uiState.videos[videoIndex]
-                        // Проверяем, является ли это видео активным (текущая страница)
-                        val isActive = page == pagerState.currentPage
-                        VideoFullScreenCard(
-                            video = video,
-                            isActive = isActive,
-                            token = token
-                        )
                     }
 
                     // Lazy load next page when near end (для бесконечной ленты)
@@ -763,13 +802,13 @@ fun VideoFullScreenCard(
                     "#$withoutHashes"
                 }
                 if (normalizedHashtags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
                         text = normalizedHashtags.joinToString(" "),
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
-            }
+                        color = Color.White,
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
 
@@ -914,8 +953,8 @@ private fun ReactionButton(
                 modifier = Modifier.size(24.dp)
             )
         }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
             text = formatCount(count),
             color = Color.White,
             fontSize = 12.sp,
@@ -1032,11 +1071,11 @@ private fun CommentsBottomSheet(
                         ) {
                             Text(
                                 text = "Ошибка: $error",
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
-            }
-        }
+                                color = Color.White,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                     comments.isEmpty() -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -1067,7 +1106,7 @@ private fun CommentsBottomSheet(
             
             // Поле ввода комментария
             Row(
-            modifier = Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                 .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,

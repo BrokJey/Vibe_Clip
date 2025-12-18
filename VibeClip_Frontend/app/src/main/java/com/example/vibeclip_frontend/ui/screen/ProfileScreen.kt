@@ -97,8 +97,8 @@ fun ProfileScreen(
                             .fillMaxWidth()
                             .padding(vertical = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                         // Аватар
                         Box(
                             modifier = Modifier
@@ -228,12 +228,12 @@ fun ProfileScreen(
                                 }
                             }
                         }
-                    }
                 }
             }
         }
     }
-    
+}
+
     // Диалог удаления
     showDeleteDialog?.let { video ->
         AlertDialog(

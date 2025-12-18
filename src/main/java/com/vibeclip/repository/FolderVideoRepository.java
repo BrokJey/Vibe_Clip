@@ -37,6 +37,11 @@ public interface FolderVideoRepository extends JpaRepository<FolderVideo, UUID> 
     List<FolderVideo> findByFolderAndShownFalseOrderByScoreDesc(Folder folder);
 
     /**
+     * Находит видео в папке, которые еще не показывались (без сортировки)
+     */
+    List<FolderVideo> findByFolderAndShownFalse(Folder folder);
+
+    /**
      * Находит видео в папке, которые еще не показывались, с пагинацией
      */
     Page<FolderVideo> findByFolderAndShownFalseOrderByScoreDesc(Folder folder, Pageable pageable);

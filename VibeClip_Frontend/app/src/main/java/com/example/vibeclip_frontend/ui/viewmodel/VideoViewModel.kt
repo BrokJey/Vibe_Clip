@@ -45,9 +45,37 @@ class VideoViewModel(
             )
             
             result.onSuccess { response ->
+                val currentVideos = _uiState.value.videos
+                val newVideos = if (page == 0) {
+                    // При первой загрузке заменяем список, но защищаемся от уменьшения
+                    // Если новый список меньше текущего и текущий не пустой, оставляем текущий
+                    if (response.content.isEmpty() && currentVideos.isNotEmpty()) {
+                        currentVideos // Сохраняем старый список, если новый пустой
+                    } else if (response.content.size < currentVideos.size && currentVideos.size >= 3) {
+                        // Если новый список значительно меньше текущего, оставляем текущий
+                        currentVideos
+                    } else {
+                        response.content
+                    }
+                } else {
+                    // При загрузке следующих страниц добавляем только новые видео (без дубликатов)
+                    val existingIds = currentVideos.map { it.id }.toSet()
+                    val newContent = response.content.filter { it.id !in existingIds }
+                    // Всегда добавляем новые видео к существующим, список только увеличивается
+                    currentVideos + newContent
+                }
+                
+                // Защита: не позволяем списку уменьшиться
+                val finalVideos = if (newVideos.size < currentVideos.size && currentVideos.isNotEmpty()) {
+                    // Если список уменьшился, оставляем старый список
+                    currentVideos
+                } else {
+                    newVideos
+                }
+                
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    videos = if (page == 0) response.content else _uiState.value.videos + response.content,
+                    videos = finalVideos,
                     currentPage = response.pageNumber,
                     hasMore = response.pageNumber < response.totalPages - 1
                 )
@@ -67,7 +95,20 @@ class VideoViewModel(
     }
     
     fun refresh() {
+        // При обновлении загружаем первую страницу, но сохраняем существующие видео, если их больше
+        val currentVideos = _uiState.value.videos
         loadVideos(0)
+        // Если после загрузки список стал меньше, восстанавливаем старый список
+        // (это обработается в loadVideos через проверку размера)
+    }
+    
+    fun addVideoToStart(video: VideoResponse) {
+        val currentVideos = _uiState.value.videos.toMutableList()
+        // Проверяем, нет ли уже этого видео в списке
+        if (currentVideos.none { it.id == video.id }) {
+            currentVideos.add(0, video)
+            _uiState.value = _uiState.value.copy(videos = currentVideos)
+        }
     }
 }
 
