@@ -10,12 +10,9 @@ import org.mapstruct.Named;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
-//MapStruct маппер для FolderPreference (Embeddable) ↔ DTO
 @Mapper(componentModel = "spring")
 public interface FolderPreferenceMapper {
 
-     //Преобразует FolderPreferenceRequest в FolderPreference entity
     @Named("toPreferenceEntity")
     default FolderPreference fromDTO(FolderPreferenceRequest request) {
         if (request == null) {
@@ -35,11 +32,9 @@ public interface FolderPreferenceMapper {
         return preference;
     }
 
-     //Преобразует FolderPreference entity в FolderPreferenceRequest
     @Named("toPreferenceRequest")
     FolderPreferenceRequest toDTO(FolderPreference preference);
 
-    //Обновляет существующую FolderPreference данными из FolderPreferenceRequest
     @Named("updatePreferenceEntity")
     default void updateEntity(@MappingTarget FolderPreference preference, FolderPreferenceRequest request) {
         if (request == null) {
@@ -72,9 +67,6 @@ public interface FolderPreferenceMapper {
         }
     }
 
-    /**
-     * Нормализует множество хэштегов
-     */
     default Set<String> normalizeHashtags(Set<String> hashtags) {
         if (hashtags == null || hashtags.isEmpty()) {
             return Set.of();

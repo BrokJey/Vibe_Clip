@@ -11,16 +11,9 @@ import org.mapstruct.Named;
 
 import java.util.UUID;
 
-/**
- * MapStruct маппер для Folder entity ↔ DTO
- */
 @Mapper(componentModel = "spring", uses = {FolderPreferenceMapper.class})
 public interface FolderMapper {
 
-    /**
-     * Преобразует FolderRequest в Folder entity (без owner и status)
-     * Owner и status должны быть установлены отдельно в сервисе
-     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "owner", ignore = true)
     @Mapping(target = "status", ignore = true)
@@ -30,18 +23,12 @@ public interface FolderMapper {
     @Mapping(target = "preference", source = "preference", qualifiedByName = "toPreferenceEntity")
     Folder fromDTO(FolderRequest request);
 
-    /**
-     * Преобразует Folder entity в FolderResponse
-     */
     @Mapping(target = "ownerId", source = "owner.id")
     @Mapping(target = "ownerUsername", source = "owner.username")
     @Mapping(target = "videoCount", source = "folderVideos", qualifiedByName = "countVideos")
     @Mapping(target = "preference", source = "preference", qualifiedByName = "toPreferenceRequest")
     FolderResponse toDTO(Folder folder);
 
-    /**
-     * Обновляет существующую Folder данными из FolderRequest
-     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "owner", ignore = true)
     @Mapping(target = "status", ignore = true)

@@ -45,9 +45,8 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
-    /**
-     * Вспомогательный метод для добавления роли пользователю
-     */
+
+    //Вспомогательные методы
     public void addRole(Role role) {
         if (this.roles == null) {
             this.roles = new HashSet<>();
@@ -55,18 +54,10 @@ public class User {
         this.roles.add(role);
     }
 
-    /**
-     * Вспомогательный метод для удаления роли у пользователя
-     */
     public void removeRole(Role role) {
         if (this.roles != null) {
             this.roles.remove(role);
         }
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
     }
 }
 

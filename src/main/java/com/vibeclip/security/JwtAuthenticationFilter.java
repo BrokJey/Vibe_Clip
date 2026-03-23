@@ -66,10 +66,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
             // Токен истек - просто пропускаем запрос дальше
             // Spring Security сам вернет 401, если эндпоинт требует аутентификации
-            log.debug("JWT token expired: {}", e.getMessage());
+            log.debug("JWT токен истек: {}", e.getMessage());
         } catch (Exception e) {
             // Другие ошибки JWT - также пропускаем
-            log.debug("JWT token validation failed: {}", e.getMessage());
+            log.debug("JWT ошибка валидации токена: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

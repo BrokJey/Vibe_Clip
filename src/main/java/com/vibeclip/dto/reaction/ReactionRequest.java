@@ -22,9 +22,6 @@ public class ReactionRequest {
     @NotNull(message = "Требуется тип реакции")
     private ReactionType reactionType;
 
-    /**
-     * Длительность просмотра в секундах (только для VIEW)
-     */
     @PositiveOrZero(message = "Длительность просмотра должна быть положительной или нулевой.")
     private Integer watchDurationSeconds;
 }

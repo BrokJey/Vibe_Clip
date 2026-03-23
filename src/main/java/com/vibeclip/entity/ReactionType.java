@@ -1,8 +1,5 @@
 package com.vibeclip.entity;
 
-/**
- * Тип реакции пользователя на видео
- */
 public enum ReactionType {
     LIKE,           // Лайк
     DISLIKE,        // Дизлайк

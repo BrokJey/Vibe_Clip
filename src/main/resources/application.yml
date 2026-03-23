@@ -10,7 +10,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    show-sql: true
+    show-sql: false
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
   servlet:
@@ -18,7 +18,7 @@ spring:
       enabled: true
       max-file-size: 1GB
       max-request-size: 1GB
-      file-size-threshold: 1GB
+      file-size-threshold: 2MB
 
 server:
   port: 8000
@@ -32,8 +32,3 @@ vibeclip:
     base-url: /uploads
   app:
     base-url: http://192.168.1.18:8000  # Базовый URL приложения для генерации ссылок на видео
-
-logging:
-  level:
-    org.hibernate.SQL: DEBUG
-

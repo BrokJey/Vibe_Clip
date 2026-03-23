@@ -49,9 +49,6 @@ public class Video {
     @Builder.Default
     private Set<String> hashtags = new HashSet<>();
 
-    /**
-     * Переопределяем сеттер для автоматической нормализации всех хэштегов
-     */
     public void setHashtags(Set<String> hashtags) {
         if (hashtags == null) {
             this.hashtags = new HashSet<>();
@@ -76,10 +73,6 @@ public class Video {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    /**
-     * Вспомогательный метод для добавления хэштега
-     * Автоматически нормализует хэштег перед добавлением
-     */
     public void addHashtag(String hashtag) {
         if (hashtag != null) {
             String normalized = HashtagUtil.normalize(hashtag);
@@ -89,17 +82,7 @@ public class Video {
         }
     }
 
-    /**
-     * Вспомогательный метод для удаления хэштега
-     */
     public void removeHashtag(String hashtag) {
         this.hashtags.remove(hashtag);
     }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }
-
-

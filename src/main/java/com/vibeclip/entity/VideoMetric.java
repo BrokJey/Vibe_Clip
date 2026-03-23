@@ -49,23 +49,14 @@ public class VideoMetric {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    /**
-     * Увеличивает счетчик просмотров
-     */
     public void incrementViews() {
         this.viewCount++;
     }
 
-    /**
-     * Увеличивает счетчик лайков
-     */
     public void incrementLikes() {
         this.likeCount++;
     }
 
-    /**
-     * Уменьшает счетчик лайков
-     */
     public void decrementLikes() {
         if (this.likeCount > 0) {
             this.likeCount--;

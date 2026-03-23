@@ -50,7 +50,7 @@ public class UserService implements UserDetailsService {
                         .credentialsExpired(false)
                         .disabled(false)
                         .build())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден: " + username));
     }
 }
 

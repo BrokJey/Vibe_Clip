@@ -15,16 +15,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * MapStruct маппер для Video entity ↔ DTO
- */
 @Mapper(componentModel = "spring")
 public interface VideoMapper {
 
-    /**
-     * Преобразует VideoRequest в Video entity (без author и status)
-     * Author и status должны быть установлены отдельно в сервисе
-     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "author", ignore = true)
     @Mapping(target = "status", ignore = true)
@@ -33,9 +26,6 @@ public interface VideoMapper {
     @Mapping(target = "hashtags", source = "hashtags", qualifiedByName = "normalizeHashtags")
     Video fromDTO(VideoRequest request);
 
-    /**
-     * Нормализует множество хэштегов
-     */
     @Named("normalizeHashtags")
     default Set<String> normalizeHashtags(Set<String> hashtags) {
         if (hashtags == null || hashtags.isEmpty()) {
@@ -47,17 +37,11 @@ public interface VideoMapper {
                 .collect(Collectors.toSet());
     }
 
-    /**
-     * Преобразует Video entity в VideoResponse
-     */
     @Mapping(target = "authorId", source = "author.id")
     @Mapping(target = "authorUsername", source = "author.username")
     @Mapping(target = "metrics", ignore = true) // Метрики загружаются отдельно
     VideoResponse toDTO(Video video);
 
-    /**
-     * Обновляет существующее Video данными из VideoRequest
-     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "author", ignore = true)
     @Mapping(target = "status", ignore = true)
@@ -67,9 +51,6 @@ public interface VideoMapper {
     @Mapping(target = "updatedAt", ignore = true)
     void updateEntity(@MappingTarget Video video, VideoRequest request);
 
-    /**
-     * Преобразует VideoMetric entity в VideoMetricsResponse
-     */
     VideoMetricsResponse toMetricsResponse(VideoMetric metric);
 }
 
