@@ -30,9 +30,6 @@ public class CommentService {
     private final VideoMetricService videoMetricService;
     private final CommentMapper commentMapper;
 
-    /**
-     * Создает новый комментарий к видео
-     */
     @Transactional
     public CommentResponse create(CommentRequest request, User user) {
         Video video = videoRepository.findById(request.getVideoId())
@@ -56,9 +53,6 @@ public class CommentService {
         return commentMapper.toDTO(saved);
     }
 
-    /**
-     * Получает все комментарии к видео, отсортированные по дате создания (новые сначала)
-     */
     public List<CommentResponse> getByVideoId(UUID videoId) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> {
@@ -72,9 +66,6 @@ public class CommentService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Получает комментарии к видео с пагинацией
-     */
     public Page<CommentResponse> getByVideoId(UUID videoId, Pageable pageable) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> {
@@ -86,9 +77,6 @@ public class CommentService {
         return comments.map(commentMapper::toDTO);
     }
 
-    /**
-     * Получает комментарий по ID
-     */
     public CommentResponse getById(UUID commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> {
@@ -99,10 +87,6 @@ public class CommentService {
         return commentMapper.toDTO(comment);
     }
 
-    /**
-     * Удаляет комментарий
-     * Пользователь может удалить только свой комментарий
-     */
     @Transactional
     public void delete(UUID commentId, User user) {
         Comment comment = commentRepository.findById(commentId)
