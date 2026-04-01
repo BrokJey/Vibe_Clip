@@ -110,9 +110,6 @@ public class CommentService {
         log.info("Комментарий {} удален пользователем {}", commentId, user.getUsername());
     }
 
-    /**
-     * Получает все комментарии пользователя
-     */
     public List<CommentResponse> getByUser(User user) {
         List<Comment> comments = commentRepository.findByUserOrderByCreatedAtDesc(user);
         return comments.stream()
@@ -120,9 +117,6 @@ public class CommentService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Подсчитывает количество комментариев к видео
-     */
     public long countByVideoId(UUID videoId) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> {

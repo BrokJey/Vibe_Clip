@@ -262,4 +262,136 @@ public class CommentServiceTest {
         verify(commentRepository).findById(commentId);
         verify(commentMapper, never()).toDTO(any());
     }
+
+    @Test
+    void delete_success() {
+        UUID commentId = UUID.randomUUID();
+        UUID videoId = UUID.randomUUID();
+
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setUsername("TestUser");
+
+        Video video = new Video();
+        video.setId(videoId);
+
+        Comment comment = new Comment();
+        comment.setId(commentId);
+        comment.setUser(user);
+        comment.setVideo(video);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        commentService.delete(commentId, user);
+
+        verify(commentRepository).delete(comment);
+        verify(videoMetricService).decrementCommentCount(videoId);
+        verify(commentRepository).findById(commentId);
+    }
+
+    @Test
+    void delete_commentNotFound_shouldThrow() {
+        UUID commendId = UUID.randomUUID();
+
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setUsername("TestUser");
+
+        when(commentRepository.findById(commendId)).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> commentService.delete(commendId, user));
+        verify(commentRepository).findById(commendId);
+        verify(commentRepository, never()).delete(any());
+        verify(videoMetricService, never()).decrementCommentCount(any());
+    }
+
+    @Test
+    void delete_notOwner_shouldThrow() {
+        UUID commentId = UUID.randomUUID();
+
+        User owner = new User();
+        owner.setId(UUID.randomUUID());
+        owner.setUsername("owner");
+
+        User fakeUser = new User();
+        fakeUser.setId(UUID.randomUUID());
+        fakeUser.setUsername("fake");
+
+        Video video = new Video();
+        video.setId(UUID.randomUUID());
+
+        Comment comment = new Comment();
+        comment.setId(commentId);
+        comment.setUser(owner);
+        comment.setVideo(video);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> commentService.delete(commentId, fakeUser));
+
+        assertTrue(ex.getMessage().contains("только свой комментарий"));
+
+        verify(commentRepository, never()).delete(any());
+        verify(videoMetricService, never()).decrementCommentCount(any());
+    }
+
+    @Test
+    void getByUser_success() {
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setUsername("TestUser");
+
+        Comment comment1 = new Comment();
+        comment1.setText("Комментарий 1");
+        Comment comment2 = new Comment();
+        comment2.setText("Комментарий 2");
+
+        CommentResponse response1 = new CommentResponse();
+        response1.setText("Комментарий 1");
+        CommentResponse response2 = new CommentResponse();
+        response2.setText("Комментарий 2");
+
+        List<CommentResponse> result = commentService.getByUser(user);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals("Комментарий 1", result.get(0).getText());
+        assertEquals("Комментарий 2", result.get(1).getText());
+
+        verify(commentRepository).findByUserOrderByCreatedAtDesc(user);
+        verify(commentMapper).toDTO(comment1);
+        verify(commentMapper).toDTO(comment2);
+    }
+
+    @Test
+    void countByVideoId_success() {
+        UUID videoId = UUID.randomUUID();
+
+        Video video = new Video();
+        video.setId(videoId);
+
+        long expectedCount = 5L;
+
+        when(videoRepository.findById(videoId)).thenReturn(Optional.of(video));
+        when(commentRepository.countByVideo(video)).thenReturn(expectedCount);
+
+        long result = commentService.countByVideoId(videoId);
+
+        assertEquals(expectedCount, result);
+
+        verify(videoRepository).findById(videoId);
+        verify(commentRepository).countByVideo(video);
+    }
+
+    @Test
+    void countByVideoId_videoNotFound_shouldThrow() {
+        UUID videoId = UUID.randomUUID();
+
+        when(videoRepository.findById(videoId)).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> commentService.countByVideoId(videoId));
+
+        assertTrue(ex.getMessage().contains("Видео не найдено"));
+
+        verify(commentRepository, never()).countByVideo(any());
+    }
 }
