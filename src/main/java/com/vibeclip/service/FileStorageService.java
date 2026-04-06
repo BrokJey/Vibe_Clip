@@ -22,16 +22,16 @@ public class FileStorageService {
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.uploadDir);
-            log.info("Upload directory initialized: {}", this.uploadDir);
+            log.info("Каталог загрузки инициализирован: {}", this.uploadDir);
         } catch (IOException e) {
-            log.error("Could not create upload directory: {}", this.uploadDir, e);
-            throw new RuntimeException("Could not create upload directory", e);
+            log.error("Не удалось создать каталог для загрузки: {}", this.uploadDir, e);
+            throw new RuntimeException("Не удалось создать каталог для загрузки", e);
         }
     }
 
     public String storeFile(MultipartFile file, String prefix) {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+            throw new IllegalArgumentException("Файл пустой");
         }
 
         try {
@@ -46,20 +46,17 @@ public class FileStorageService {
 
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-            log.info("File stored: {}", filename);
+            log.info("Файл сохранен: {}", filename);
             return "/uploads/" + filename;
         } catch (IOException e) {
-            log.error("Failed to store file", e);
-            throw new RuntimeException("Failed to store file", e);
+            log.error("Не удалось сохранить файл", e);
+            throw new RuntimeException("Не удалось сохранить файл", e);
         }
     }
 
-    /**
-     * Получает абсолютный путь к файлу по его URL
-     */
     public Path getFilePath(String fileUrl) {
         if (fileUrl == null || !fileUrl.startsWith("/uploads/")) {
-            throw new IllegalArgumentException("Invalid file URL: " + fileUrl);
+            throw new IllegalArgumentException("Не верная ссылка URL: " + fileUrl);
         }
         String filename = fileUrl.substring("/uploads/".length());
         return this.uploadDir.resolve(filename);
@@ -74,17 +71,12 @@ public class FileStorageService {
             String filename = fileUrl.substring("/uploads/".length());
             Path filePath = this.uploadDir.resolve(filename);
             Files.deleteIfExists(filePath);
-            log.info("File deleted: {}", filename);
+            log.info("Файл удален: {}", filename);
         } catch (IOException e) {
-            log.error("Failed to delete file: {}", fileUrl, e);
+            log.error("Ошибка удаления файла: {}", fileUrl, e);
         }
     }
 
-    /**
-     * Извлекает первый кадр из видео и сохраняет как изображение
-     * @param videoPath путь к видеофайлу
-     * @return URL сохраненного превью
-     */
     public String extractThumbnailFromVideo(Path videoPath) {
         try {
             String thumbnailFilename = "thumb-" + UUID.randomUUID() + ".jpg";
@@ -105,15 +97,15 @@ public class FileStorageService {
             int exitCode = process.waitFor();
 
             if (exitCode == 0 && Files.exists(thumbnailPath)) {
-                log.info("Thumbnail extracted: {}", thumbnailFilename);
+                log.info("Извлечено миниатюрное изображение: {}", thumbnailFilename);
                 return "/uploads/" + thumbnailFilename;
             } else {
-                log.warn("Failed to extract thumbnail, exit code: {}", exitCode);
+                log.warn("Не удалось извлечь миниатюру, код: {}", exitCode);
                 // Пытаемся извлечь кадр на 0 секунде
                 return extractThumbnailAtTime(videoPath, "00:00:00", thumbnailFilename);
             }
         } catch (Exception e) {
-            log.error("Error extracting thumbnail from video: {}", videoPath, e);
+            log.error("Ошибка при извлечении миниатюры из видео: {}", videoPath, e);
             // Если FFmpeg недоступен, возвращаем null
             return null;
         }
@@ -136,11 +128,11 @@ public class FileStorageService {
             int exitCode = process.waitFor();
 
             if (exitCode == 0 && Files.exists(thumbnailPath)) {
-                log.info("Thumbnail extracted at time {}: {}", time, thumbnailFilename);
+                log.info("Миниатюра извлечена в момент времени {}: {}", time, thumbnailFilename);
                 return "/uploads/" + thumbnailFilename;
             }
         } catch (Exception e) {
-            log.error("Error extracting thumbnail at time {}: {}", time, e);
+            log.error("Ошибка при извлечении миниатюры {}: {}", time, e);
         }
         return null;
     }
