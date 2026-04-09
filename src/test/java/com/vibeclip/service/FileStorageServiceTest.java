@@ -1,7 +1,9 @@
 package com.vibeclip.service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -10,6 +12,8 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+
+@ExtendWith(MockitoExtension.class)
 public class FileStorageServiceTest {
 
     @Test
@@ -79,10 +83,10 @@ public class FileStorageServiceTest {
     }
 
     @Test
-    void deleteFile_invalid_shouldDoNothing(@TempDir Path tempDir) {
+    void deteleFile_invalid_shouldDoNothing(@TempDir Path tempDir) {
         FileStorageService service = new FileStorageService(tempDir.toString());
 
-        assertDoesNotThrow(() -> service.deleteFile("invalid-url"));
+        service.deleteFile("invalid-url");
     }
 
     @Test

@@ -18,7 +18,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -125,31 +124,24 @@ public class CommentServiceTest {
         CommentResponse response2 = new CommentResponse();
         response2.setText(comment2.getText());
 
-        comment1.setCreatedAt(LocalDateTime.now().minusDays(1));
-        comment2.setCreatedAt(LocalDateTime.now());
-
-        List<Comment> comments = List.of(comment2, comment1);
+        List<Comment> comments = List.of(comment1, comment2);
 
         when(videoRepository.findById(videoId)).thenReturn(Optional.of(video));
         when(commentRepository.findByVideoOrderByCreatedAtDesc(video)).thenReturn(comments);
-        when(commentMapper.toDTO(any(Comment.class))).thenAnswer(invocation -> {
-            Comment c = invocation.getArgument(0);
-            CommentResponse r = new CommentResponse();
-            r.setText(c.getText());
-            return r;
-        });
+        when(commentMapper.toDTO(comment1)).thenReturn(response1);
+        when(commentMapper.toDTO(comment2)).thenReturn(response2);
 
         List<CommentResponse> result = commentService.getByVideoId(videoId);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        assertEquals("Комментарий 2", result.get(0).getText());
-        assertEquals("Комментарий 1", result.get(1).getText());
+        assertEquals("Комментарий 1", result.get(0).getText());
+        assertEquals("Комментарий 2", result.get(1).getText());
 
-        verify(videoRepository).findById(videoId);
-        verify(commentRepository).findByVideoOrderByCreatedAtDesc(video);
-        verify(commentMapper).toDTO(comment1);
-        verify(commentMapper).toDTO(comment2);
+        verify(videoRepository.findById(videoId));
+        verify(commentRepository.findByVideoOrderByCreatedAtDesc(video));
+        verify(commentMapper.toDTO(comment1));
+        verify(commentMapper.toDTO(comment2));
     }
 
     @Test
@@ -198,7 +190,6 @@ public class CommentServiceTest {
         when(commentMapper.toDTO(comment1)).thenReturn(response1);
         when(commentMapper.toDTO(comment2)).thenReturn(response2);
 
-
         Page<CommentResponse> result = commentService.getByVideoId(videoId, pageable);
 
         assertNotNull(result);
@@ -206,10 +197,10 @@ public class CommentServiceTest {
         assertEquals("Комментарий 1", result.getContent().get(0).getText());
         assertEquals("Комментарий 2", result.getContent().get(1).getText());
 
-        verify(videoRepository).findById(videoId);
-        verify(commentRepository).findByVideoOrderByCreatedAtDesc(video, pageable);
-        verify(commentMapper).toDTO(comment1);
-        verify(commentMapper).toDTO(comment2);
+        verify(videoRepository.findById(videoId));
+        verify(commentRepository.findByVideoOrderByCreatedAtDesc(video));
+        verify(commentMapper.toDTO(comment1));
+        verify(commentMapper.toDTO(comment2));
     }
 
     @Test
@@ -251,8 +242,8 @@ public class CommentServiceTest {
         assertNotNull(result);
         assertEquals("Комментарий", result.getText());
 
-        verify(commentRepository).findById(commentId);
-        verify(commentMapper).toDTO(comment);
+        verify(commentRepository.findById(commentId));
+        verify(commentMapper.toDTO(comment));
     }
 
     @Test
@@ -335,7 +326,7 @@ public class CommentServiceTest {
 
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> commentService.delete(commentId, fakeUser));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> commentService.delete(commentId, fakeUser));
 
         assertTrue(ex.getMessage().contains("только свой комментарий"));
 
@@ -359,23 +350,12 @@ public class CommentServiceTest {
         CommentResponse response2 = new CommentResponse();
         response2.setText("Комментарий 2");
 
-        when(commentRepository.findByUserOrderByCreatedAtDesc(user))
-                .thenReturn(List.of(comment2, comment1));
-
-        // Настраиваем маппер, чтобы возвращал правильные CommentResponse
-        when(commentMapper.toDTO(any(Comment.class))).thenAnswer(invocation -> {
-            Comment c = invocation.getArgument(0);
-            CommentResponse r = new CommentResponse();
-            r.setText(c.getText());
-            return r;
-        });
-
         List<CommentResponse> result = commentService.getByUser(user);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        assertEquals("Комментарий 2", result.get(0).getText());
-        assertEquals("Комментарий 1", result.get(1).getText());
+        assertEquals("Комментарий 1", result.get(0).getText());
+        assertEquals("Комментарий 2", result.get(1).getText());
 
         verify(commentRepository).findByUserOrderByCreatedAtDesc(user);
         verify(commentMapper).toDTO(comment1);
