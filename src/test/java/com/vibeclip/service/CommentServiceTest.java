@@ -138,10 +138,10 @@ public class CommentServiceTest {
         assertEquals("Комментарий 1", result.get(0).getText());
         assertEquals("Комментарий 2", result.get(1).getText());
 
-        verify(videoRepository.findById(videoId));
-        verify(commentRepository.findByVideoOrderByCreatedAtDesc(video));
-        verify(commentMapper.toDTO(comment1));
-        verify(commentMapper.toDTO(comment2));
+        verify(videoRepository).findById(videoId);
+        verify(commentRepository).findByVideoOrderByCreatedAtDesc(video);
+        verify(commentMapper).toDTO(comment1);
+        verify(commentMapper).toDTO(comment2);
     }
 
     @Test
@@ -159,7 +159,6 @@ public class CommentServiceTest {
 
         verify(videoRepository).findById(videoId);
         verify(commentRepository, never()).findByVideoOrderByCreatedAtDesc(any());
-        verify(commentMapper, never()).toDTO(any());
         verify(commentMapper, never()).toDTO(any());
     }
 
@@ -197,10 +196,10 @@ public class CommentServiceTest {
         assertEquals("Комментарий 1", result.getContent().get(0).getText());
         assertEquals("Комментарий 2", result.getContent().get(1).getText());
 
-        verify(videoRepository.findById(videoId));
-        verify(commentRepository.findByVideoOrderByCreatedAtDesc(video));
-        verify(commentMapper.toDTO(comment1));
-        verify(commentMapper.toDTO(comment2));
+        verify(videoRepository).findById(videoId);
+        verify(commentRepository).findByVideoOrderByCreatedAtDesc(video, pageable);
+        verify(commentMapper).toDTO(comment1);
+        verify(commentMapper).toDTO(comment2);
     }
 
     @Test
@@ -242,8 +241,8 @@ public class CommentServiceTest {
         assertNotNull(result);
         assertEquals("Комментарий", result.getText());
 
-        verify(commentRepository.findById(commentId));
-        verify(commentMapper.toDTO(comment));
+        verify(commentRepository).findById(commentId);
+        verify(commentMapper).toDTO(comment);
     }
 
     @Test
@@ -326,9 +325,9 @@ public class CommentServiceTest {
 
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> commentService.delete(commentId, fakeUser));
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> commentService.delete(commentId, fakeUser));
 
-        assertTrue(ex.getMessage().contains("только свой комментарий"));
+        assertTrue(ex.getMessage().contains("удалить только свой комментарий"));
 
         verify(commentRepository, never()).delete(any());
         verify(videoMetricService, never()).decrementCommentCount(any());
@@ -349,6 +348,12 @@ public class CommentServiceTest {
         response1.setText("Комментарий 1");
         CommentResponse response2 = new CommentResponse();
         response2.setText("Комментарий 2");
+
+        when(commentRepository.findByUserOrderByCreatedAtDesc(user))
+                .thenReturn(List.of(comment1, comment2));
+
+        when(commentMapper.toDTO(comment1)).thenReturn(response1);
+        when(commentMapper.toDTO(comment2)).thenReturn(response2);
 
         List<CommentResponse> result = commentService.getByUser(user);
 
