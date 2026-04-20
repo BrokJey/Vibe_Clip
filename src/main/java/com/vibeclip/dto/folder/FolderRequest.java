@@ -8,10 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Универсальный DTO для создания и обновления папки.
- * Все поля опциональны - валидация обязательности выполняется в сервисе при создании.
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
