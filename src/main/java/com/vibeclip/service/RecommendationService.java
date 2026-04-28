@@ -25,7 +25,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 
-// Сервис для формирования рекомендаций и лент папок
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -38,50 +37,40 @@ public class RecommendationService {
     private final ReactionRepository reactionRepository;
 
 
-    // Формирует ленту рекомендаций для папки на основе указанных хэштегов
     @Transactional
     public List<FolderVideo> generateFeedForFolder(Folder folder, int limit) {
         FolderPreference preference = folder.getPreference();
-        
-        // Получаем список уже существующих видео в папке (чтобы не дублировать)
+
         List<FolderVideo> existingFolderVideos = folderVideoRepository.findByFolder(folder);
         java.util.Set<UUID> existingVideoIds = existingFolderVideos.stream()
                 .map(fv -> fv.getVideo().getId())
                 .collect(Collectors.toSet());
 
-        // Получаем кандидатов с учетом хэштегов
-        Pageable pageable = PageRequest.of(0, limit * 5); // Берем больше для выбора
+        Pageable pageable = PageRequest.of(0, limit * 5);
         Page<Video> candidates;
         
         if (preference != null && preference.getAllowedHashtags() != null && !preference.getAllowedHashtags().isEmpty()) {
-            // Если указаны хэштеги - фильтруем по ним
-            // Находим видео, у которых есть хотя бы один совпадающий хэштег
             candidates = videoRepository.findByHashtagsIn(
                     preference.getAllowedHashtags().stream().collect(Collectors.toList()),
                     VideoStatus.PUBLISHED,
                     pageable
             );
         } else {
-            // Если хэштеги не указаны - берем все опубликованные видео
             candidates = videoRepository.findByStatus(VideoStatus.PUBLISHED, pageable);
         }
 
-        // Фильтруем кандидатов, исключая уже существующие видео
         List<Video> newCandidates = candidates.getContent().stream()
                 .filter(video -> !existingVideoIds.contains(video.getId()))
                 .collect(Collectors.toList());
         
         log.debug("После исключения существующих видео осталось {} новых кандидатов", newCandidates.size());
 
-        // Перемешиваем кандидатов случайным образом
         java.util.Collections.shuffle(newCandidates);
-        
-        // Ограничиваем лимитом после перемешивания
+
         newCandidates = newCandidates.stream()
                 .limit(limit)
                 .collect(Collectors.toList());
 
-        // Создаем FolderVideo записи в случайном порядке
         int maxPosition = existingFolderVideos.stream()
                 .mapToInt(FolderVideo::getPosition)
                 .max()
@@ -92,36 +81,29 @@ public class RecommendationService {
             FolderVideo folderVideo = FolderVideo.builder()
                     .folder(folder)
                     .video(newCandidates.get(i))
-                    .score(1.0) // Простой score, не используется
+                    .score(1.0)
                     .position(maxPosition + 1 + i)
                     .shown(false)
                     .build();
             folderVideos.add(folderVideo);
         }
 
-        // Сохраняем в БД только новые записи
         folderVideos.forEach(folderVideoRepository::save);
 
         log.info("Сгенерировано {} новых рекомендаций для папки {}", folderVideos.size(), folder.getId());
         return folderVideos;
     }
 
-    /**
-     * Получает ленту папки (непоказанные видео, в случайном порядке)
-     */
     public List<FolderVideo> getFeedForFolder(Folder folder, int limit) {
-        // Получаем все непоказанные видео (без сортировки по score)
         List<FolderVideo> folderVideos = folderVideoRepository
                 .findByFolderAndShownFalse(folder);
 
         if (folderVideos.isEmpty() || folderVideos.size() < limit) {
-            // Если непоказанных видео мало, генерируем новые рекомендации
             generateFeedForFolder(folder, limit);
             folderVideos = folderVideoRepository
                     .findByFolderAndShownFalse(folder);
         }
 
-        // Перемешиваем видео случайным образом и ограничиваем лимитом
         java.util.Collections.shuffle(folderVideos);
         return folderVideos.stream()
                 .limit(limit)
