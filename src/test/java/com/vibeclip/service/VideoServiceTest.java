@@ -377,7 +377,7 @@ public class VideoServiceTest {
         videoService.delete(id, author);
 
         verify(videoRepository).findByIdAndAuthorId(id, author.getId());
-        verifyNoMoreInteractions(videoRepository);
+        verify(videoRepository).delete(video);
     }
 
     @Test
@@ -389,6 +389,7 @@ public class VideoServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> videoService.delete(id, author));
 
+        verify(videoRepository).findByIdAndAuthorId(id, author.getId());
         verify(videoRepository).findByIdAndAuthorId(id, author.getId());
         verifyNoMoreInteractions(videoRepository);
     }
@@ -404,7 +405,7 @@ public class VideoServiceTest {
         videoService.deleteByAdmin(id);
 
         verify(videoRepository).findById(id);
-        verifyNoMoreInteractions(videoRepository);
+        verify(videoRepository).delete(video);
     }
 
     @Test
@@ -422,6 +423,7 @@ public class VideoServiceTest {
         assertTrue(ex.getMessage().contains("Видео не найдено"));
 
         verify(videoRepository).findById(id);
+        verify(videoRepository).findById(id);
         verifyNoMoreInteractions(videoRepository);
     }
 
@@ -434,6 +436,8 @@ public class VideoServiceTest {
         video.setTitle("test");
         video.setVideoUrl("video.mp4");
         video.setThumbnailUrl("thumb.jpg");
+
+        when(videoRepository.findById(id)).thenReturn(Optional.of(video));
 
         doNothing().when(videoMetricRepository).deleteByVideoId(id);
         doNothing().when(commentRepository).deleteByVideo(video);
@@ -459,6 +463,8 @@ public class VideoServiceTest {
         Video video = new Video();
         video.setId(id);
 
+        when(videoRepository.findById(id)).thenReturn(Optional.of(video));
+
         doThrow(new RuntimeException("fail metrics")).when(videoMetricRepository).deleteByVideoId(id);
         doThrow(new RuntimeException("fail comments")).when(commentRepository).deleteByVideo(video);
 
@@ -480,6 +486,8 @@ public class VideoServiceTest {
         video.setVideoUrl(null);
         video.setThumbnailUrl(null);
 
+        when(videoRepository.findById(id)).thenReturn(Optional.of(video));
+
         videoService.deleteByAdmin(id);
 
         verify(fileStorageService, never()).deleteFile(any());
@@ -497,14 +505,10 @@ public class VideoServiceTest {
         VideoResponse response = new VideoResponse();
         VideoMetricsResponse metrics = new VideoMetricsResponse();
 
-        when(videoRepository.findByIdAndAuthorId(id, author.getId()))
-                .thenReturn(Optional.of(video));
-        when(videoRepository.save(video))
-                .thenReturn(updated);
-        when(videoMapper.toDTO(updated))
-                .thenReturn(response);
-        when(videoMetricService.getByVideoId(id))
-                .thenReturn(metrics);
+        when(videoRepository.findByIdAndAuthorId(id, author.getId())).thenReturn(Optional.of(video));
+        when(videoRepository.save(video)).thenReturn(updated);
+        when(videoMapper.toDTO(updated)).thenReturn(response);
+        when(videoMetricService.getByVideoId(id)).thenReturn(metrics);
 
         VideoResponse result = videoService.publish(id, author);
 
