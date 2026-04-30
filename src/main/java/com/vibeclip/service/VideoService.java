@@ -7,9 +7,8 @@ import com.vibeclip.entity.Video;
 import com.vibeclip.entity.VideoMetric;
 import com.vibeclip.entity.VideoStatus;
 import com.vibeclip.mapper.VideoMapper;
-import com.vibeclip.repository.VideoMetricRepository;
-import com.vibeclip.repository.VideoRepository;
-import com.vibeclip.service.FileStorageService;
+import com.vibeclip.repository.*;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,9 +32,9 @@ public class VideoService {
     private final FileStorageService fileStorageService;
     private final VideoMetricService videoMetricService;
     private final RecommendationService recommendationService;
-    private final com.vibeclip.repository.CommentRepository commentRepository;
-    private final com.vibeclip.repository.ReactionRepository reactionRepository;
-    private final com.vibeclip.repository.FolderVideoRepository folderVideoRepository;
+    private final CommentRepository commentRepository;
+    private final ReactionRepository reactionRepository;
+    private final FolderVideoRepository folderVideoRepository;
 
 
     @Transactional
@@ -44,14 +43,12 @@ public class VideoService {
         video.setAuthor(author);
         video.setStatus(VideoStatus.PUBLISHED);
 
-        // Устанавливаем хэштеги, если они есть (нормализация происходит в addHashtag)
         if (request.getHashtags() != null) {
             request.getHashtags().forEach(video::addHashtag);
         }
 
         Video saved = videoRepository.save(video);
 
-        // Создаем метрики для видео
         VideoMetric metric = VideoMetric.builder()
                 .video(saved)
                 .viewCount(0L)
@@ -63,7 +60,6 @@ public class VideoService {
 
         log.info("Создано видео {} ", request.getTitle());
         VideoResponse response = videoMapper.toDTO(saved);
-        // Загружаем метрики и устанавливаем их в ответ
         try {
             response.setMetrics(videoMetricService.getByVideoId(saved.getId()));
         } catch (Exception e) {
@@ -77,7 +73,6 @@ public class VideoService {
         Video video = videoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Видео не найдено: " + id));
         VideoResponse response = videoMapper.toDTO(video);
-        // Загружаем метрики и устанавливаем их в ответ
         try {
             response.setMetrics(videoMetricService.getByVideoId(id));
         } catch (Exception e) {
@@ -91,7 +86,6 @@ public class VideoService {
         Video video = videoRepository.findByIdAndAuthorId(id, author.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Видео не найдено или вы не автор"));
         VideoResponse response = videoMapper.toDTO(video);
-        // Загружаем метрики и устанавливаем их в ответ
         try {
             response.setMetrics(videoMetricService.getByVideoId(id));
         } catch (Exception e) {
@@ -124,7 +118,6 @@ public class VideoService {
 
         Video updated = videoRepository.save(video);
         VideoResponse response = videoMapper.toDTO(updated);
-        // Загружаем метрики и устанавливаем их в ответ
         try {
             response.setMetrics(videoMetricService.getByVideoId(id));
         } catch (Exception e) {
@@ -254,7 +247,6 @@ public class VideoService {
      * Если пользователь не авторизован или у него нет лайков, возвращает обычную ленту
      */
     public Page<VideoResponse> getRecommendedFeed(User user, Pageable pageable, Double randomPercentage) {
-        // Получаем рекомендованную ленту
         Page<Video> recommendedVideos = recommendationService.getRecommendedFeed(user, pageable, randomPercentage);
         
         // Преобразуем в VideoResponse с метриками
