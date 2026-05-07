@@ -29,11 +29,11 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
     @Query("SELECT DISTINCT v FROM Video v JOIN v.hashtags h WHERE h IN :hashtags AND v.status = :status")
     Page<Video> findByHashtagsIn(@Param("hashtags") List<String> hashtags, @Param("status") VideoStatus status, Pageable pageable);
 
-    @Query("SELECT v FROM Video v WHERE v.status = :status AND NOT EXISTS " +
-           "(SELECT 1 FROM v.hashtags h WHERE h IN :blockedHashtags)")
-    Page<Video> findByStatusExcludingHashtags(@Param("status") VideoStatus status, 
-                                               @Param("blockedHashtags") List<String> blockedHashtags, 
-                                               Pageable pageable);
+@Query("SELECT DISTINCT v FROM Video v LEFT JOIN v.hashtags h WHERE h IN :hashtags AND v.status = :status AND h NOT IN :blockedHashtags")
+Page<Video> findByStatusExcludingHashtags(@Param("status") VideoStatus status, 
+                                          @Param("hashtags") List<String> hashtags, 
+                                          @Param("blockedHashtags") List<String> blockedHashtags, 
+                                          Pageable pageable);
 
     @Query("SELECT v FROM Video v WHERE v.status = :status AND v.author.id NOT IN :blockedAuthorIds")
     Page<Video> findByStatusExcludingAuthors(@Param("status") VideoStatus status, 
@@ -50,5 +50,3 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
 
     Optional<Video> findByIdAndAuthorId(UUID videoId, UUID authorId);
 }
-
-

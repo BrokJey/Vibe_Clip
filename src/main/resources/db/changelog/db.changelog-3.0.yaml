@@ -1,0 +1,84 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 12-add-private-profile-to-users
+      author: vibeclip
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: private_profile
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 13-create-subscriptions
+      author: vibeclip
+      changes:
+
+        - createTable:
+            tableName: subscriptions
+            columns:
+
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+
+              - column:
+                  name: subscriber_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: target_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: subscriptions
+            columnNames: subscriber_id, target_id
+            constraintName: uk_subscriptions_unique
+
+        - addForeignKeyConstraint:
+            baseTableName: subscriptions
+            baseColumnNames: subscriber_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_subscriptions_subscriber
+            onDelete: CASCADE
+
+        - addForeignKeyConstraint:
+            baseTableName: subscriptions
+            baseColumnNames: target_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_subscriptions_target
+            onDelete: CASCADE
+
+        - createIndex:
+            tableName: subscriptions
+            indexName: idx_subscriptions_subscriber
+            columns:
+              - column:
+                  name: subscriber_id
+
+        - createIndex:
+            tableName: subscriptions
+            indexName: idx_subscriptions_target
+            columns:
+              - column:
+                  name: target_id

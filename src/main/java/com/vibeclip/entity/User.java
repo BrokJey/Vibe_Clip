@@ -1,8 +1,6 @@
 package com.vibeclip.entity;
 
 import jakarta.persistence.*;
-
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -33,6 +31,10 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean privateProfile = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -60,4 +62,3 @@ public class User {
         }
     }
 }
-
