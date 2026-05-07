@@ -58,4 +58,9 @@ public class UserService implements UserDetailsService {
                         .build())
                 .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден: " + username));
     }
+
+    public User updatePrivacy(User user, boolean privateProfile) {
+        user.setPrivateProfile(privateProfile);
+        return userRepository.save(user);
+    }
 }

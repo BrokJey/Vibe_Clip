@@ -82,3 +82,17 @@ databaseChangeLog:
             columns:
               - column:
                   name: target_id
+
+  - changeSet:
+      id: 14-add-subscription-status
+      author: vibeclip
+      changes:
+        - addColumn:
+            tableName: subscriptions
+            columns:
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false

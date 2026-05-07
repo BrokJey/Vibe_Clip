@@ -1,5 +1,6 @@
 package com.vibeclip.controller;
 
+import com.vibeclip.dto.user.UpdatePrivacyRequest;
 import com.vibeclip.dto.user.UserProfileResponse;
 import com.vibeclip.dto.user.UserResponse;
 import com.vibeclip.dto.video.VideoResponse;
@@ -12,10 +13,7 @@ import com.vibeclip.service.SubscriptionService;
 import com.vibeclip.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -54,12 +52,12 @@ public class UserController extends BaseController {
 
         boolean isMe = currentUser.getId().equals(profileUser.getId());
 
-        boolean subscribed = isMe || subscriptionService.isSubscribed(currentUser, profileUser);
+        boolean isAccepted = subscriptionService.isSubscribed(currentUser, profileUser);
 
         boolean canViewVideos =
                 !profileUser.isPrivateProfile()
-                        || subscribed
-                        || currentUser.getId().equals(profileUser.getId());
+                        || isMe
+                        || isAccepted;
 
         List<VideoResponse> videos = List.of();
 
@@ -76,12 +74,23 @@ public class UserController extends BaseController {
                 .id(profileUser.getId())
                 .username(profileUser.getUsername())
                 .privateProfile(profileUser.isPrivateProfile())
-                .subscribed(subscribed)
+                .subscribed(isAccepted)
                 .subscribersCount(subscriptionService.getSubscribersCount(profileUser))
                 .subscriptionsCount(subscriptionService.getSubscriptionsCount(profileUser))
                 .videos(videos)
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/privacy")
+    public ResponseEntity<UserResponse> updatePrivacy(@RequestBody UpdatePrivacyRequest request, Authentication authentication
+    ) {
+
+        User user = getCurrentUser(authentication);
+
+        User updated = userService.updatePrivacy(user, request.isPrivateProfile());
+
+        return ResponseEntity.ok(userMapper.toDTO(updated));
     }
 }

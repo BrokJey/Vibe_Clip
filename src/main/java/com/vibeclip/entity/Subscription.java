@@ -35,6 +35,11 @@ public class Subscription {
     @JoinColumn(name = "target_id", nullable = false)
     private User target;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private SubscriptionStatus status = SubscriptionStatus.PENDING;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
