@@ -2,6 +2,8 @@ package com.vibeclip.service;
 
 import com.vibeclip.entity.Subscription;
 import com.vibeclip.entity.User;
+import com.vibeclip.exception.AlreadySubscribedException;
+import com.vibeclip.exception.UserNotFoundException;
 import com.vibeclip.repository.SubscriptionRepository;
 import com.vibeclip.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -21,16 +23,14 @@ public class SubscriptionService {
     public void subscribe(User subscriber, UUID targetId) {
 
         User target = userRepository.findById(targetId)
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+                .orElseThrow(() -> new UserNotFoundException(targetId.toString()));
 
-        // Нельзя подписаться на себя
         if (subscriber.getId().equals(target.getId())) {
-            throw new RuntimeException("Нельзя подписаться на самого себя");
+            throw new IllegalArgumentException("Нельзя подписаться на себя");
         }
 
-        // Уже подписан
         if (subscriptionRepository.existsBySubscriberAndTarget(subscriber, target)) {
-            throw new RuntimeException("Вы уже подписаны");
+            throw new AlreadySubscribedException(targetId);
         }
 
         Subscription subscription = Subscription.builder()
@@ -44,7 +44,7 @@ public class SubscriptionService {
     public void unsubscribe(User subscriber, UUID targetId) {
 
         User target = userRepository.findById(targetId)
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+                .orElseThrow(() -> new UserNotFoundException(targetId.toString()));
 
         subscriptionRepository.deleteBySubscriberAndTarget(subscriber, target);
     }
