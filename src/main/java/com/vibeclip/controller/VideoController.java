@@ -238,5 +238,21 @@ public class VideoController extends BaseController {
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @GetMapping("/feed/subscriptions")
+    public ResponseEntity<Page<VideoResponse>> getSubscriptionFeed(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, Authentication authentication) {
+        User user = getCurrentUser(authentication);
+        Pageable pageable = PageRequest.of(page, size);
+
+        return ResponseEntity.ok(videoService.getSubscriptionFeed(user, pageable));
+    }
+
+    @GetMapping("/feed")
+    public ResponseEntity<Page<VideoResponse>> getFeed(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, Authentication authentication) {
+        User user = getCurrentUser(authentication);
+        Pageable pageable = PageRequest.of(page, size);
+
+        return ResponseEntity.ok(videoService.getMixedFeed(user, pageable));
+    }
 }
 

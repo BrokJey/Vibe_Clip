@@ -49,4 +49,6 @@ Page<Video> findByStatusExcludingHashtags(@Param("status") VideoStatus status,
                                                Pageable pageable);
 
     Optional<Video> findByIdAndAuthorId(UUID videoId, UUID authorId);
+
+    Page<Video> findByAuthorInAndStatus(List<User> authors, VideoStatus status, Pageable pageable);
 }

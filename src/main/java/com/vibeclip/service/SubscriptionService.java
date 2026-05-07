@@ -120,4 +120,12 @@ public class SubscriptionService {
                 )
                 .toList();
     }
+
+    public List<User> getApprovedSubscriptions(User user) {
+        return subscriptionRepository
+                .findBySubscriberAndStatus(user, SubscriptionStatus.ACCEPTED)
+                .stream()
+                .map(Subscription::getTarget)
+                .toList();
+    }
 }

@@ -13,10 +13,13 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -35,6 +38,8 @@ public class VideoService {
     private final CommentRepository commentRepository;
     private final ReactionRepository reactionRepository;
     private final FolderVideoRepository folderVideoRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionService subscriptionService;
 
 
     @Transactional
@@ -341,5 +346,79 @@ public class VideoService {
             response.setMetrics(null);
         }
         return response;
+    }
+
+    public Page<VideoResponse> getSubscriptionFeed(User user, Pageable pageable) {
+
+        List<User> following = subscriptionRepository.findAcceptedSubscriptions(user);
+
+        if (following.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        return videoRepository
+                .findByAuthorInAndStatus(following, VideoStatus.PUBLISHED, pageable)
+                .map(video -> {
+                    VideoResponse response = videoMapper.toDTO(video);
+
+                    try {
+                        response.setMetrics(videoMetricService.getByVideoId(video.getId()));
+                    } catch (Exception e) {
+                        response.setMetrics(null);
+                    }
+
+                    return response;
+                });
+    }
+
+    public Page<VideoResponse> getMixedFeed(User user, Pageable pageable) {
+
+        List<User> following = subscriptionService.getApprovedSubscriptions(user);
+
+        List<Video> followVideos = following.isEmpty()
+                ? List.of()
+                : videoRepository.findByAuthorInAndStatus(
+                following,
+                VideoStatus.PUBLISHED,
+                pageable
+        ).getContent();
+
+        Page<Video> recommendedPage = recommendationService
+                .getRecommendedFeed(user, pageable, null);
+
+        List<Video> recommendedVideos = recommendedPage.getContent();
+
+        // MIX STRATEGY (70/30)
+        List<Video> mixed = new ArrayList<>();
+
+        int followLimit = (int) (pageable.getPageSize() * 0.7);
+        int recLimit = pageable.getPageSize() - followLimit;
+
+        mixed.addAll(followVideos.stream().limit(followLimit).toList());
+        mixed.addAll(recommendedVideos.stream().limit(recLimit).toList());
+
+        // если подписок мало — добиваем рекомендациями
+        if (mixed.size() < pageable.getPageSize()) {
+            List<Video> fallback = videoRepository.findByStatus(VideoStatus.PUBLISHED, pageable)
+                    .getContent();
+
+            mixed.addAll(fallback);
+        }
+
+        // маппинг
+        List<VideoResponse> result = mixed.stream()
+                .distinct()
+                .map(video -> {
+                    VideoResponse r = videoMapper.toDTO(video);
+                    try {
+                        r.setMetrics(videoMetricService.getByVideoId(video.getId()));
+                    } catch (Exception e) {
+                        r.setMetrics(null);
+                    }
+                    return r;
+                })
+                .toList();
+
+        return new PageImpl<>(result, pageable, result.size());
     }
 }
