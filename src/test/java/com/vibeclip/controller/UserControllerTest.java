@@ -3,7 +3,10 @@ package com.vibeclip.controller;
 import com.vibeclip.dto.user.UserResponse;
 import com.vibeclip.entity.User;
 import com.vibeclip.mapper.UserMapper;
+import com.vibeclip.mapper.VideoMapper;
+import com.vibeclip.repository.VideoRepository;
 import com.vibeclip.service.JwtService;
+import com.vibeclip.service.SubscriptionService;
 import com.vibeclip.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +44,15 @@ class UserControllerTest {
 
     @MockBean
     private JwtService jwtService;
+
+    @MockBean
+    private SubscriptionService subscriptionService;
+
+    @MockBean
+    private VideoRepository videoRepository;
+
+    @MockBean
+    private VideoMapper videoMapper;
 
     @Test
     @WithMockUser(username = "user@test.com")
