@@ -22,6 +22,9 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     @Column(nullable = false, unique = true)
     private String email;
 

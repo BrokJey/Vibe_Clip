@@ -13,6 +13,8 @@ public class UserProfileResponse {
 
     private UUID id;
 
+    private String avatarUrl;
+
     private String username;
 
     private boolean privateProfile;

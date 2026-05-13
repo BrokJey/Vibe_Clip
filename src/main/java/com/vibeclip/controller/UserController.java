@@ -14,6 +14,7 @@ import com.vibeclip.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -37,60 +38,53 @@ public class UserController extends BaseController {
     // Получение информации о текущем аутентифицированном пользователе
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getUserMe(Authentication authentication) {
+
         User user = getCurrentUser(authentication);
+
         UserResponse response = userMapper.toDTO(user);
+
+        response.setAvatarUrl(userService.getAvatarUrl(user));
+
         return ResponseEntity.ok(response);
     }
 
+
     @GetMapping("/{username}")
-    public ResponseEntity<UserProfileResponse> getProfile(@PathVariable String username, Authentication authentication
-    ) {
+    public ResponseEntity<UserProfileResponse> getProfile(@PathVariable String username, Authentication authentication) {
 
         User currentUser = getCurrentUser(authentication);
 
-        User profileUser = userService.findByUsername(username);
-
-        boolean isMe = currentUser.getId().equals(profileUser.getId());
-
-        boolean isAccepted = subscriptionService.isSubscribed(currentUser, profileUser);
-
-        boolean canViewVideos =
-                !profileUser.isPrivateProfile()
-                        || isMe
-                        || isAccepted;
-
-        List<VideoResponse> videos = List.of();
-
-        if (canViewVideos) {
-
-            videos = videoRepository
-                    .findByAuthorAndStatus(profileUser, VideoStatus.PUBLISHED)
-                    .stream()
-                    .map(videoMapper::toDTO)
-                    .toList();
-        }
-
-        UserProfileResponse response = UserProfileResponse.builder()
-                .id(profileUser.getId())
-                .username(profileUser.getUsername())
-                .privateProfile(profileUser.isPrivateProfile())
-                .subscribed(isAccepted)
-                .subscribersCount(subscriptionService.getSubscribersCount(profileUser))
-                .subscriptionsCount(subscriptionService.getSubscriptionsCount(profileUser))
-                .videos(videos)
-                .build();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                userService.getProfile(username, currentUser)
+        );
     }
 
     @PatchMapping("/privacy")
-    public ResponseEntity<UserResponse> updatePrivacy(@RequestBody UpdatePrivacyRequest request, Authentication authentication
-    ) {
+    public ResponseEntity<UserResponse> updatePrivacy(@RequestBody UpdatePrivacyRequest request, Authentication authentication) {
 
         User user = getCurrentUser(authentication);
 
         User updated = userService.updatePrivacy(user, request.isPrivateProfile());
 
         return ResponseEntity.ok(userMapper.toDTO(updated));
+    }
+
+    @PostMapping("/avatar")
+    public ResponseEntity<UserResponse> uploadAvatar(@RequestPart("avatar") MultipartFile avatar, Authentication authentication) {
+        User user = getCurrentUser(authentication);
+
+        UserResponse response =
+                userService.uploadAvatar(user, avatar);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/avatar")
+    public ResponseEntity<Void> deleteAvatar(Authentication authentication) {
+        User user = getCurrentUser(authentication);
+
+        userService.deleteAvatar(user);
+
+        return ResponseEntity.noContent().build();
     }
 }

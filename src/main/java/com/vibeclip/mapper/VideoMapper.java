@@ -39,6 +39,7 @@ public interface VideoMapper {
 
     @Mapping(target = "authorId", source = "author.id")
     @Mapping(target = "authorUsername", source = "author.username")
+    @Mapping(target = "authorAvatarUrl", source = "author.avatarUrl")
     @Mapping(target = "metrics", ignore = true) // Метрики загружаются отдельно
     VideoResponse toDTO(Video video);
 

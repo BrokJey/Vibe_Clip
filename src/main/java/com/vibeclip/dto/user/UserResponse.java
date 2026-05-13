@@ -15,6 +15,7 @@ import java.util.UUID;
 @Builder
 public class UserResponse {
     private UUID id;
+    private String avatarUrl;
     private String email;
     private String username;
     private LocalDateTime createdAt;

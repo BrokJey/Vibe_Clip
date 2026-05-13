@@ -29,6 +29,7 @@ public class VideoResponse {
     // Информация об авторе
     private UUID authorId;
     private String authorUsername;
+    private String authorAvatarUrl;
 
     // Хэштеги
     private Set<String> hashtags;

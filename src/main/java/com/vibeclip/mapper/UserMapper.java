@@ -22,6 +22,7 @@ public interface UserMapper {
     User fromDTO(RegisterRequest request);
 
     @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToStringSet")
+    @Mapping(target = "avatarUrl", source = ".", qualifiedByName = "avatarOrDefault")
     UserResponse toDTO(User user);
 
     @Mapping(target = "id", ignore = true)
@@ -32,12 +33,17 @@ public interface UserMapper {
 
     @Named("rolesToStringSet")
     default Set<String> rolesToStringSet(Set<Role> roles) {
-        if (roles == null) {
-            return null;
-        }
+        if (roles == null) return null;
         return roles.stream()
                 .map(role -> role.getName().name())
                 .collect(Collectors.toSet());
+    }
+
+    @Named("avatarOrDefault")
+    default String avatarOrDefault(User user) {
+        return user.getAvatarUrl() != null
+                ? user.getAvatarUrl()
+                : "/uploads/default-avatar.png";
     }
 }
 
