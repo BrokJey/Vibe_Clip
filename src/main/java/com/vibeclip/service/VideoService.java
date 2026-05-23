@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -148,7 +149,7 @@ public class VideoService {
 
     private void deleteVideoCompletely(Video video) {
         log.info("Начинается удаление видео {} ({})", video.getId(), video.getTitle());
-        
+
         // 1. Удаляем метрики
         try {
             videoMetricRepository.deleteByVideoId(video.getId());
@@ -156,7 +157,7 @@ public class VideoService {
         } catch (Exception e) {
             log.warn("Не удалось удалить метрики видео {}: {}", video.getId(), e.getMessage());
         }
-        
+
         // 2. Удаляем комментарии
         try {
             commentRepository.deleteByVideo(video);
@@ -164,7 +165,7 @@ public class VideoService {
         } catch (Exception e) {
             log.warn("Не удалось удалить комментарии к видео {}: {}", video.getId(), e.getMessage());
         }
-        
+
         // 3. Удаляем реакции
         try {
             reactionRepository.deleteByVideo(video);
@@ -172,7 +173,7 @@ public class VideoService {
         } catch (Exception e) {
             log.warn("Не удалось удалить реакции на видео {}: {}", video.getId(), e.getMessage());
         }
-        
+
         // 4. Удаляем связи с папками
         try {
             folderVideoRepository.deleteByVideo(video);
@@ -180,7 +181,7 @@ public class VideoService {
         } catch (Exception e) {
             log.warn("Не удалось удалить связи видео {} с папками: {}", video.getId(), e.getMessage());
         }
-        
+
         // 5. Удаляем файлы (видео и превью)
         try {
             if (video.getVideoUrl() != null) {
@@ -194,7 +195,7 @@ public class VideoService {
         } catch (Exception e) {
             log.error("Ошибка при удалении файлов видео {}: {}", video.getId(), e.getMessage());
         }
-        
+
         // 6. Удаляем само видео из БД
         videoRepository.delete(video);
         log.info("Видео {} ({}) полностью удалено", video.getId(), video.getTitle());
@@ -253,7 +254,7 @@ public class VideoService {
      */
     public Page<VideoResponse> getRecommendedFeed(User user, Pageable pageable, Double randomPercentage) {
         Page<Video> recommendedVideos = recommendationService.getRecommendedFeed(user, pageable, randomPercentage);
-        
+
         // Преобразуем в VideoResponse с метриками
         return recommendedVideos.map(video -> {
             VideoResponse response = videoMapper.toDTO(video);
@@ -284,8 +285,17 @@ public class VideoService {
             User author
     ) {
         // Сохраняем видеофайл
-        String videoUrl = fileStorageService.storeFile(videoFile, "video");
-        
+        String rawVideoUrl = fileStorageService.storeFile(videoFile, "raw-video");
+
+// 2. получаем путь к файлу
+        Path rawPath = fileStorageService.getFilePath(rawVideoUrl);
+
+// 3. транскодим
+        Path processedPath = fileStorageService.transcodeVideo(rawPath);
+
+// 4. сохраняем уже обработанный файл как финальный
+        String videoUrl = fileStorageService.storeFile(processedPath, "video");
+
         // Обрабатываем превью
         String thumbnailUrl;
         if (thumbnailFile != null && !thumbnailFile.isEmpty()) {
@@ -296,7 +306,7 @@ public class VideoService {
             try {
                 java.nio.file.Path videoPath = fileStorageService.getFilePath(videoUrl);
                 thumbnailUrl = fileStorageService.extractThumbnailFromVideo(videoPath);
-                
+
                 if (thumbnailUrl == null) {
                     log.warn("Не удалось извлечь превью из видео, используем null");
                     thumbnailUrl = null; // Превью будет null, фронтенд может использовать первый кадр видео

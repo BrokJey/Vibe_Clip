@@ -54,6 +54,24 @@ public class FileStorageService {
         }
     }
 
+    public String storeFile(Path filePath, String prefix) {
+        try {
+            String extension = "";
+
+            String filename = prefix + "-" + UUID.randomUUID() + ".mp4";
+            Path targetLocation = this.uploadDir.resolve(filename);
+
+            Files.copy(filePath, targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            log.info("Файл сохранен (Path): {}", filename);
+            return "/uploads/" + filename;
+
+        } catch (IOException e) {
+            log.error("Не удалось сохранить файл из Path", e);
+            throw new RuntimeException(e);
+        }
+    }
+
     public Path getFilePath(String fileUrl) {
         if (fileUrl == null || !fileUrl.startsWith("/uploads/")) {
             throw new IllegalArgumentException("Не верная ссылка URL: " + fileUrl);
@@ -135,6 +153,51 @@ public class FileStorageService {
             log.error("Ошибка при извлечении миниатюры {}: {}", time, e);
         }
         return null;
+    }
+
+    public Path transcodeVideo(Path inputPath) {
+        try {
+            String outputFilename = "processed-" + UUID.randomUUID() + ".mp4";
+            Path outputPath = this.uploadDir.resolve(outputFilename);
+
+            ProcessBuilder pb = new ProcessBuilder(
+                    "ffmpeg",
+                    "-i", inputPath.toString(),
+
+                    // фикс кодека (главное!)
+                    "-c:v", "libx264",
+                    "-preset", "fast",
+                    "-crf", "23",
+
+                    // ограничение разрешения
+                    "-vf", "scale='min(1920,iw)':-2",
+
+                    // 30 FPS cap
+                    "-r", "30",
+
+                    // аудио
+                    "-c:a", "aac",
+
+                    "-movflags", "+faststart",
+
+                    "-y",
+                    outputPath.toString()
+            );
+
+            Process process = pb.start();
+            int code = process.waitFor();
+
+            if (code != 0) {
+                throw new RuntimeException("FFmpeg failed with code " + code);
+            }
+
+            log.info("Видео перекодировано: {}", outputFilename);
+            return outputPath;
+
+        } catch (Exception e) {
+            log.error("Ошибка транскодинга видео", e);
+            throw new RuntimeException(e);
+        }
     }
 }
 
