@@ -5,8 +5,11 @@ import com.example.vibeclip_frontend.data.repository.AuthRepository
 import com.example.vibeclip_frontend.data.repository.CommentRepository
 import com.example.vibeclip_frontend.data.repository.FolderRepository
 import com.example.vibeclip_frontend.data.repository.ReactionRepository
+import com.example.vibeclip_frontend.data.repository.SubscriptionRepository
 import com.example.vibeclip_frontend.data.repository.UserRepository
 import com.example.vibeclip_frontend.data.repository.VideoRepository
+import com.example.vibeclip_frontend.util.SubscribersStore
+import com.example.vibeclip_frontend.util.SubscriptionsStore
 import com.example.vibeclip_frontend.util.TokenManager
 
 object AppModule {
@@ -30,6 +33,15 @@ object AppModule {
     
     lateinit var commentRepository: CommentRepository
         private set
+
+    lateinit var subscriptionRepository: SubscriptionRepository
+        private set
+
+    lateinit var subscriptionsStore: SubscriptionsStore
+        private set
+
+    lateinit var subscribersStore: SubscribersStore
+        private set
     
     fun initialize(context: Context) {
         tokenManager = TokenManager(context)
@@ -39,6 +51,9 @@ object AppModule {
         userRepository = UserRepository()
         reactionRepository = ReactionRepository()
         commentRepository = CommentRepository()
+        subscriptionRepository = SubscriptionRepository()
+        subscriptionsStore = SubscriptionsStore(context)
+        subscribersStore = SubscribersStore(context)
     }
 }
 

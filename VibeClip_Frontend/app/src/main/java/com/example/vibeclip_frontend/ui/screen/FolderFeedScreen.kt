@@ -18,8 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.vibeclip_frontend.data.repository.FolderRepository
-import com.example.vibeclip_frontend.ui.screen.VideoFullScreenCard
 import com.example.vibeclip_frontend.ui.viewmodel.FolderFeedViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -27,6 +27,7 @@ import com.example.vibeclip_frontend.ui.viewmodel.FolderFeedViewModel
 fun FolderFeedScreen(
     token: String,
     folderId: String,
+    navController: NavController,
     onBack: () -> Unit,
     viewModel: FolderFeedViewModel = viewModel {
         FolderFeedViewModel(FolderRepository(), token, folderId)
@@ -90,7 +91,8 @@ fun FolderFeedScreen(
                     VideoFullScreenCard(
                         video = folderVideo.video,
                         isActive = isActive,
-                        token = token
+                        token = token,
+                        navController = navController
                     )
                 }
 

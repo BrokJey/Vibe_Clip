@@ -1,6 +1,8 @@
 package com.example.vibeclip_frontend.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,6 +13,7 @@ import com.example.vibeclip_frontend.ui.screen.LoginScreen
 import com.example.vibeclip_frontend.ui.screen.ProfileScreen
 import com.example.vibeclip_frontend.ui.screen.RegisterScreen
 import com.example.vibeclip_frontend.ui.screen.VideoUploadScreen
+import com.example.vibeclip_frontend.ui.screen.UserProfileScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -28,6 +31,19 @@ sealed class Screen(val route: String) {
         companion object {
             const val routePattern = "folder_feed/{folderId}"
         }
+    }
+
+    data class UserProfile(val username: String) : Screen("user/{username}") {
+        companion object {
+            const val routePattern = "user/{username}"
+            fun createRoute(username: String): String = "user/${Uri.encode(username)}"
+        }
+    }
+}
+
+fun NavController.navigateToUserProfile(username: String) {
+    navigate(Screen.UserProfile.createRoute(username)) {
+        launchSingleTop = true
     }
 }
 
@@ -76,6 +92,7 @@ fun NavGraph(
             if (token != null) {
                 FeedScreen(
                     token = token,
+                    navController = navController,
                     initialVideoId = null,
                     onLogout = {
                         onLogout()
@@ -92,6 +109,7 @@ fun NavGraph(
             if (token != null && videoId != null) {
                 FeedScreen(
                     token = token,
+                    navController = navController,
                     initialVideoId = videoId,
                     onLogout = {
                         onLogout()
@@ -129,6 +147,7 @@ fun NavGraph(
                 FolderFeedScreen(
                     token = token,
                     folderId = folderId,
+                    navController = navController,
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -140,7 +159,26 @@ fun NavGraph(
                     token = token,
                     onLogout = onLogout,
                     onVideoClick = { video ->
-                        // При клике на видео переходим к ленте с конкретным видео
+                        navController.navigate(Screen.FeedWithVideo(video.id).route) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToUser = { username ->
+                        navController.navigateToUserProfile(username)
+                    }
+                )
+            }
+        }
+
+        composable(Screen.UserProfile.routePattern) { backStackEntry ->
+            val username = backStackEntry.arguments?.getString("username")?.let { Uri.decode(it) }
+
+            if (token != null && !username.isNullOrBlank()) {
+                UserProfileScreen(
+                    token = token,
+                    username = username,
+                    onBack = { navController.popBackStack() },
+                    onVideoClick = { video ->
                         navController.navigate(Screen.FeedWithVideo(video.id).route) {
                             launchSingleTop = true
                         }

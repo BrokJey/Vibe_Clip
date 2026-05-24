@@ -67,11 +67,14 @@ import com.example.vibeclip_frontend.data.model.ReactionResponse
 import com.example.vibeclip_frontend.data.model.CommentResponse
 import com.example.vibeclip_frontend.data.repository.CommentRepository
 import kotlinx.coroutines.launch
+import androidx.navigation.NavController
+import com.example.vibeclip_frontend.navigation.navigateToUserProfile
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FeedScreen(
     token: String,
+    navController: NavController,
     initialVideoId: String? = null,
     onLogout: () -> Unit,
     viewModel: VideoViewModel = viewModel { VideoViewModel(VideoRepository(), token) }
@@ -205,7 +208,8 @@ fun FeedScreen(
                                 VideoFullScreenCard(
                                     video = video,
                                     isActive = isActive,
-                                    token = token
+                                    token = token,
+                                    navController = navController
                                 )
                             } else {
                                 // Защита от выхода за границы
@@ -242,7 +246,8 @@ fun FeedScreen(
 fun VideoFullScreenCard(
     video: VideoResponse,
     isActive: Boolean = true,
-    token: String
+    token: String,
+    navController: NavController? = null
 ) {
     val scope = rememberCoroutineScope()
     val reactionRepository = remember { AppModule.reactionRepository }
@@ -743,7 +748,13 @@ fun VideoFullScreenCard(
             Text(
                 text = "@${video.authorUsername.orEmpty()}",
                 color = Color.White,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable {
+                    val username = video.authorUsername
+                    if (username != null && navController != null) {
+                        navController.navigateToUserProfile(username)
+                    }
+                }
             )
             Spacer(modifier = Modifier.height(4.dp))
             // Название без кавычек, крупнее
