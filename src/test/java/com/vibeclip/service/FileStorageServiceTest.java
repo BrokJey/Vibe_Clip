@@ -17,6 +17,23 @@ import static org.junit.jupiter.api.Assertions.*;
 public class FileStorageServiceTest {
 
     @Test
+    void storeFile_tmpName_usesContentTypeExtension(@TempDir Path tempDir) throws Exception {
+        FileStorageService service = new FileStorageService(tempDir.toString());
+
+        MultipartFile file = new MockMultipartFile(
+                "file",
+                "upload123456789.tmp",
+                "video/mp4",
+                "fake video".getBytes()
+        );
+
+        String result = service.storeFile(file, "video");
+
+        assertTrue(result.matches("/uploads/video-[a-f0-9\\-]+\\.mp4"));
+    }
+
+
+    @Test
     void storeFile_success(@TempDir Path tempDir) throws Exception {
         FileStorageService service = new FileStorageService(tempDir.toString());
 

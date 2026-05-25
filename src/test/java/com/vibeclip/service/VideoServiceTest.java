@@ -785,9 +785,7 @@ public class VideoServiceTest {
     void createWithFiles_withThumbnail_success() {
         MultipartFile videoFile = mock(MultipartFile.class);
         MultipartFile thumbnailFile = mock(MultipartFile.class);
-
         User author = new User();
-
         UUID videoId = UUID.randomUUID();
 
         Video saved = new Video();
@@ -796,47 +794,26 @@ public class VideoServiceTest {
         VideoResponse response = new VideoResponse();
         VideoMetricsResponse metrics = new VideoMetricsResponse();
 
-        when(fileStorageService.storeFile(videoFile, "raw-video"))
-                .thenReturn("/uploads/raw.mp4");
-
-        when(fileStorageService.getFilePath("/uploads/raw.mp4"))
-                .thenReturn(Paths.get("raw.mp4"));
-
-        when(fileStorageService.transcodeVideo(any(Path.class)))
-                .thenReturn(Paths.get("processed.mp4"));
-
-        when(fileStorageService.storeFile(any(Path.class), eq("video")))
+        when(fileStorageService.storeFile(videoFile, "video"))
                 .thenReturn("/uploads/video.mp4");
-
         when(fileStorageService.storeFile(thumbnailFile, "thumb"))
                 .thenReturn("/uploads/thumb.jpg");
-
-        when(videoRepository.save(any(Video.class)))
-                .thenReturn(saved);
-
-        when(videoMapper.toDTO(any(Video.class)))
-                .thenReturn(response);
-
-        when(videoMetricService.getByVideoId(videoId))
-                .thenReturn(metrics);
+        when(videoRepository.save(any(Video.class))).thenReturn(saved);
+        when(videoMapper.toDTO(any(Video.class))).thenReturn(response);
+        when(videoMetricService.getByVideoId(videoId)).thenReturn(metrics);
 
         VideoResponse result = videoService.createWithFiles(
-                videoFile,
-                thumbnailFile,
-                "title",
-                "desc",
-                Set.of("tag1"),
-                120,
-                author
+                videoFile, thumbnailFile, "title", "desc", Set.of("tag1"), 120, author
         );
 
         assertNotNull(result);
         assertSame(response, result);
         assertEquals(metrics, result.getMetrics());
 
-        verify(fileStorageService).storeFile(videoFile, "raw-video");
-        verify(fileStorageService).storeFile(any(Path.class), eq("video"));
+        verify(fileStorageService).storeFile(videoFile, "video");
         verify(fileStorageService).storeFile(thumbnailFile, "thumb");
+        verify(fileStorageService, never()).getFilePath(anyString());
+        verify(fileStorageService, never()).extractThumbnailFromVideo(any());
     }
 
     @Test
@@ -844,19 +821,14 @@ public class VideoServiceTest {
         MultipartFile videoFile = mock(MultipartFile.class);
         User author = new User();
 
-        // raw-видео
-        String rawUrl = "raw.mp4";
-        Path rawPath = mock(Path.class);
-        Path processedPath = mock(Path.class);
-        String finalUrl = "video.mp4";
-        Path videoPath = mock(Path.class);   // путь к финальному видео
+        String videoUrl = "/uploads/video.mp4";
+        Path videoPath = mock(Path.class);
+        String generatedThumbnailUrl = "generated.jpg";
 
-        when(fileStorageService.storeFile(videoFile, "raw-video")).thenReturn(rawUrl);
-        when(fileStorageService.getFilePath(rawUrl)).thenReturn(rawPath);
-        when(fileStorageService.transcodeVideo(rawPath)).thenReturn(processedPath);
-        when(fileStorageService.storeFile(processedPath, "video")).thenReturn(finalUrl);
-        when(fileStorageService.getFilePath(finalUrl)).thenReturn(videoPath);
-        when(fileStorageService.extractThumbnailFromVideo(videoPath)).thenReturn("generated.jpg");
+        when(fileStorageService.storeFile(videoFile, "video")).thenReturn(videoUrl);
+        when(fileStorageService.getFilePath(videoUrl)).thenReturn(videoPath);
+        when(fileStorageService.extractThumbnailFromVideo(videoPath))
+                .thenReturn(generatedThumbnailUrl);
         when(videoRepository.save(any(Video.class))).thenReturn(new Video());
         when(videoMapper.toDTO(any())).thenReturn(new VideoResponse());
         when(videoMetricService.getByVideoId(any())).thenReturn(new VideoMetricsResponse());
@@ -866,31 +838,22 @@ public class VideoServiceTest {
         );
 
         assertNotNull(result);
-        verify(fileStorageService).storeFile(videoFile, "raw-video");
-        verify(fileStorageService).transcodeVideo(rawPath);
-        verify(fileStorageService).storeFile(processedPath, "video");
-        verify(fileStorageService).getFilePath(finalUrl);
+        verify(fileStorageService).storeFile(videoFile, "video");
+        verify(fileStorageService).getFilePath(videoUrl);
         verify(fileStorageService).extractThumbnailFromVideo(videoPath);
+        verify(fileStorageService, never()).storeFile(any(MultipartFile.class), eq("thumb"));
     }
 
     @Test
     void createWithFiles_thumbnailExtractionReturnsNull() throws Exception {
         MultipartFile videoFile = mock(MultipartFile.class);
 
-        String rawUrl = "raw.mp4";
-        Path rawPath = mock(Path.class);
-        Path processedPath = mock(Path.class);
-        String finalUrl = "video.mp4";
+        String videoUrl = "/uploads/video.mp4";
         Path videoPath = mock(Path.class);
 
-        when(fileStorageService.storeFile(videoFile, "raw-video")).thenReturn(rawUrl);
-        when(fileStorageService.getFilePath(rawUrl)).thenReturn(rawPath);
-        when(fileStorageService.transcodeVideo(rawPath)).thenReturn(processedPath);
-        when(fileStorageService.storeFile(processedPath, "video")).thenReturn(finalUrl);
-
-        when(fileStorageService.getFilePath(finalUrl)).thenReturn(videoPath);
+        when(fileStorageService.storeFile(videoFile, "video")).thenReturn(videoUrl);
+        when(fileStorageService.getFilePath(videoUrl)).thenReturn(videoPath);
         when(fileStorageService.extractThumbnailFromVideo(videoPath)).thenReturn(null);
-
         when(videoRepository.save(any())).thenReturn(new Video());
         when(videoMapper.toDTO(any())).thenReturn(new VideoResponse());
         when(videoMetricService.getByVideoId(any())).thenReturn(new VideoMetricsResponse());
@@ -901,26 +864,16 @@ public class VideoServiceTest {
 
         assertNotNull(result);
         verify(fileStorageService).extractThumbnailFromVideo(videoPath);
-        // thumbnailUrl будет null, никакого дополнительного сохранения файла
     }
 
     @Test
     void createWithFiles_thumbnailExtractionThrowsException() throws Exception {
         MultipartFile videoFile = mock(MultipartFile.class);
 
-        String rawUrl = "raw.mp4";
-        Path rawPath = mock(Path.class);
-        Path processedPath = mock(Path.class);
-        String finalUrl = "video.mp4";
+        String videoUrl = "/uploads/video.mp4";
 
-        when(fileStorageService.storeFile(videoFile, "raw-video")).thenReturn(rawUrl);
-        when(fileStorageService.getFilePath(rawUrl)).thenReturn(rawPath);
-        when(fileStorageService.transcodeVideo(rawPath)).thenReturn(processedPath);
-        when(fileStorageService.storeFile(processedPath, "video")).thenReturn(finalUrl);
-
-        // бросаем исключение именно при получении пути финального видео (этап извлечения кадра)
-        when(fileStorageService.getFilePath(finalUrl)).thenThrow(new RuntimeException("fail"));
-
+        when(fileStorageService.storeFile(videoFile, "video")).thenReturn(videoUrl);
+        when(fileStorageService.getFilePath(videoUrl)).thenThrow(new RuntimeException("fail"));
         when(videoRepository.save(any())).thenReturn(new Video());
         when(videoMapper.toDTO(any())).thenReturn(new VideoResponse());
         when(videoMetricService.getByVideoId(any())).thenReturn(new VideoMetricsResponse());
@@ -930,7 +883,7 @@ public class VideoServiceTest {
         );
 
         assertNotNull(result);
-        verify(fileStorageService).getFilePath(finalUrl);
-        verify(fileStorageService, never()).extractThumbnailFromVideo(any()); // не должен вызываться
+        verify(fileStorageService).getFilePath(videoUrl);
+        verify(fileStorageService, never()).extractThumbnailFromVideo(any());
     }
 }

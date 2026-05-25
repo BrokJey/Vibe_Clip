@@ -18,7 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -105,7 +104,6 @@ public class VideoService {
     public VideoResponse update(UUID id, VideoRequest request, User author) {
         Video video = videoRepository.findByIdAndAuthorId(id, author.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Видео не найдено или вы не автор"));
-
         // Обновляем только переданные поля
         if (request.getTitle() != null) {
             video.setTitle(request.getTitle());
@@ -285,16 +283,7 @@ public class VideoService {
             User author
     ) {
         // Сохраняем видеофайл
-        String rawVideoUrl = fileStorageService.storeFile(videoFile, "raw-video");
-
-// 2. получаем путь к файлу
-        Path rawPath = fileStorageService.getFilePath(rawVideoUrl);
-
-// 3. транскодим
-        Path processedPath = fileStorageService.transcodeVideo(rawPath);
-
-// 4. сохраняем уже обработанный файл как финальный
-        String videoUrl = fileStorageService.storeFile(processedPath, "video");
+        String videoUrl = fileStorageService.storeFile(videoFile, "video");
 
         // Обрабатываем превью
         String thumbnailUrl;
@@ -305,7 +294,9 @@ public class VideoService {
             // Если превью не передано, извлекаем первый кадр из видео
             try {
                 java.nio.file.Path videoPath = fileStorageService.getFilePath(videoUrl);
+                log.info("Превью не передано клиентом, извлекаем кадр из {}", videoPath.getFileName());
                 thumbnailUrl = fileStorageService.extractThumbnailFromVideo(videoPath);
+                log.info("Извлечение превью завершено: {}", thumbnailUrl != null ? thumbnailUrl : "нет");
 
                 if (thumbnailUrl == null) {
                     log.warn("Не удалось извлечь превью из видео, используем null");
@@ -384,6 +375,7 @@ public class VideoService {
     public Page<VideoResponse> getMixedFeed(User user, Pageable pageable) {
 
         List<User> following = subscriptionService.getApprovedSubscriptions(user);
+
 
         List<Video> followVideos = following.isEmpty()
                 ? List.of()

@@ -10,11 +10,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 public class FileStorageService {
+
+    private static final int FFMPEG_TIMEOUT_SECONDS = 90;
 
     private final Path uploadDir;
 
@@ -35,12 +39,7 @@ public class FileStorageService {
         }
 
         try {
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-
+            String extension = resolveFileExtension(file);
             String filename = prefix + "-" + UUID.randomUUID() + extension;
             Path targetLocation = this.uploadDir.resolve(filename);
 
@@ -54,22 +53,47 @@ public class FileStorageService {
         }
     }
 
-    public String storeFile(Path filePath, String prefix) {
-        try {
-            String extension = "";
-
-            String filename = prefix + "-" + UUID.randomUUID() + ".mp4";
-            Path targetLocation = this.uploadDir.resolve(filename);
-
-            Files.copy(filePath, targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-            log.info("Файл сохранен (Path): {}", filename);
-            return "/uploads/" + filename;
-
-        } catch (IOException e) {
-            log.error("Не удалось сохранить файл из Path", e);
-            throw new RuntimeException(e);
+    /**
+     * Определяет расширение по имени файла или MIME (Android часто шлёт upload*.tmp).
+     */
+    private String resolveFileExtension(MultipartFile file) {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename != null && originalFilename.contains(".")) {
+            String ext = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+            if (!".tmp".equals(ext) && !".temp".equals(ext)) {
+                return ext;
+            }
         }
+        return extensionFromContentType(file.getContentType());
+    }
+
+    private String extensionFromContentType(String contentType) {
+        if (contentType == null) {
+            return ".mp4";
+        }
+        String ct = contentType.toLowerCase();
+        if (ct.contains("mp4") || ct.contains("mpeg4")) {
+            return ".mp4";
+        }
+        if (ct.contains("quicktime")) {
+            return ".mov";
+        }
+        if (ct.contains("webm")) {
+            return ".webm";
+        }
+        if (ct.contains("3gpp")) {
+            return ".3gp";
+        }
+        if (ct.contains("jpeg") || ct.contains("jpg")) {
+            return ".jpg";
+        }
+        if (ct.contains("png")) {
+            return ".png";
+        }
+        if (ct.contains("webp")) {
+            return ".webp";
+        }
+        return ".mp4";
     }
 
     public Path getFilePath(String fileUrl) {
@@ -84,7 +108,6 @@ public class FileStorageService {
         if (fileUrl == null || !fileUrl.startsWith("/uploads/")) {
             return;
         }
-
         try {
             String filename = fileUrl.substring("/uploads/".length());
             Path filePath = this.uploadDir.resolve(filename);
@@ -96,108 +119,65 @@ public class FileStorageService {
     }
 
     public String extractThumbnailFromVideo(Path videoPath) {
-        try {
-            String thumbnailFilename = "thumb-" + UUID.randomUUID() + ".jpg";
-            Path thumbnailPath = this.uploadDir.resolve(thumbnailFilename);
+        String thumbnailFilename = "thumb-" + UUID.randomUUID() + ".jpg";
+        Path thumbnailPath = this.uploadDir.resolve(thumbnailFilename);
 
-            // Используем FFmpeg для извлечения первого кадра
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                    "ffmpeg",
-                    "-i", videoPath.toString(),
-                    "-ss", "00:00:01", // Берем кадр на 1 секунде (на случай черного экрана в начале)
-                    "-vframes", "1",
-                    "-q:v", "2", // Качество JPEG (2 = высокое качество)
-                    "-y", // Перезаписать файл, если существует
-                    thumbnailPath.toString()
-            );
-
-            Process process = processBuilder.start();
-            int exitCode = process.waitFor();
-
-            if (exitCode == 0 && Files.exists(thumbnailPath)) {
-                log.info("Извлечено миниатюрное изображение: {}", thumbnailFilename);
-                return "/uploads/" + thumbnailFilename;
-            } else {
-                log.warn("Не удалось извлечь миниатюру, код: {}", exitCode);
-                // Пытаемся извлечь кадр на 0 секунде
-                return extractThumbnailAtTime(videoPath, "00:00:00", thumbnailFilename);
-            }
-        } catch (Exception e) {
-            log.error("Ошибка при извлечении миниатюры из видео: {}", videoPath, e);
-            // Если FFmpeg недоступен, возвращаем null
-            return null;
+        log.info("Извлечение превью из {} …", videoPath.getFileName());
+        int exitCode = runFfmpegExtract(videoPath, thumbnailPath, "00:00:01");
+        if (exitCode == 0 && Files.exists(thumbnailPath)) {
+            log.info("Извлечено миниатюрное изображение: {}", thumbnailFilename);
+            return "/uploads/" + thumbnailFilename;
         }
-    }
 
-    private String extractThumbnailAtTime(Path videoPath, String time, String thumbnailFilename) {
-        try {
-            Path thumbnailPath = this.uploadDir.resolve(thumbnailFilename);
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                    "ffmpeg",
-                    "-i", videoPath.toString(),
-                    "-ss", time,
-                    "-vframes", "1",
-                    "-q:v", "2",
-                    "-y",
-                    thumbnailPath.toString()
-            );
-
-            Process process = processBuilder.start();
-            int exitCode = process.waitFor();
-
-            if (exitCode == 0 && Files.exists(thumbnailPath)) {
-                log.info("Миниатюра извлечена в момент времени {}: {}", time, thumbnailFilename);
-                return "/uploads/" + thumbnailFilename;
-            }
-        } catch (Exception e) {
-            log.error("Ошибка при извлечении миниатюры {}: {}", time, e);
+        log.warn("Превью на 1 с не получено (код {}), пробуем кадр 0 с", exitCode);
+        exitCode = runFfmpegExtract(videoPath, thumbnailPath, "00:00:00");
+        if (exitCode == 0 && Files.exists(thumbnailPath)) {
+            log.info("Миниатюра извлечена в 00:00:00: {}", thumbnailFilename);
+            return "/uploads/" + thumbnailFilename;
         }
+
+        log.warn("Не удалось извлечь превью из {}", videoPath.getFileName());
         return null;
     }
 
-    public Path transcodeVideo(Path inputPath) {
+    /**
+     * Запуск ffmpeg без зависания: stderr/stdout сбрасываются, есть таймаут.
+     * Без чтения stderr процесс часто блокируется на Windows при заполнении буфера.
+     */
+    private int runFfmpegExtract(Path videoPath, Path thumbnailPath, String seekTime) {
         try {
-            String outputFilename = "processed-" + UUID.randomUUID() + ".mp4";
-            Path outputPath = this.uploadDir.resolve(outputFilename);
-
-            ProcessBuilder pb = new ProcessBuilder(
-                    "ffmpeg",
-                    "-i", inputPath.toString(),
-
-                    // фикс кодека (главное!)
-                    "-c:v", "libx264",
-                    "-preset", "fast",
-                    "-crf", "23",
-
-                    // ограничение разрешения
-                    "-vf", "scale='min(1920,iw)':-2",
-
-                    // 30 FPS cap
-                    "-r", "30",
-
-                    // аудио
-                    "-c:a", "aac",
-
-                    "-movflags", "+faststart",
-
-                    "-y",
-                    outputPath.toString()
+            ProcessBuilder processBuilder = new ProcessBuilder(
+                    List.of(
+                            "ffmpeg",
+                            "-hide_banner",
+                            "-loglevel", "error",
+                            "-nostdin",
+                            "-y",
+                            "-ss", seekTime,
+                            "-i", videoPath.toString(),
+                            "-frames:v", "1",
+                            "-q:v", "5",
+                            thumbnailPath.toString()
+                    )
             );
+            processBuilder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+            processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD);
 
-            Process process = pb.start();
-            int code = process.waitFor();
-
-            if (code != 0) {
-                throw new RuntimeException("FFmpeg failed with code " + code);
+            Process process = processBuilder.start();
+            boolean finished = process.waitFor(FFMPEG_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                log.warn("ffmpeg превысил таймаут {} с для {}", FFMPEG_TIMEOUT_SECONDS, videoPath.getFileName());
+                return -1;
             }
-
-            log.info("Видео перекодировано: {}", outputFilename);
-            return outputPath;
-
-        } catch (Exception e) {
-            log.error("Ошибка транскодинга видео", e);
-            throw new RuntimeException(e);
+            return process.exitValue();
+        } catch (IOException e) {
+            log.error("Не удалось запустить ffmpeg для {}", videoPath, e);
+            return -1;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Прервано ожидание ffmpeg для {}", videoPath, e);
+            return -1;
         }
     }
 }
-
