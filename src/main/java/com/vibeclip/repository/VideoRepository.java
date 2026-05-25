@@ -51,4 +51,15 @@ Page<Video> findByStatusExcludingHashtags(@Param("status") VideoStatus status,
     Optional<Video> findByIdAndAuthorId(UUID videoId, UUID authorId);
 
     Page<Video> findByAuthorInAndStatus(List<User> authors, VideoStatus status, Pageable pageable);
+    @Query("""
+    SELECT v FROM Video v
+    WHERE v.status = :status
+    AND (
+        v.author.privateProfile = false
+        OR v.author.id = :userId
+    )
+       """)
+    Page<Video> findPublicVideos(@Param("status") VideoStatus status,
+                                 @Param("userId") UUID userId,
+                                 Pageable pageable);
 }

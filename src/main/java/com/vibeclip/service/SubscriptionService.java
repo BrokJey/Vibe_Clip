@@ -4,6 +4,7 @@ import com.vibeclip.dto.subscription.SubscriptionRequestResponse;
 import com.vibeclip.entity.Subscription;
 import com.vibeclip.entity.SubscriptionStatus;
 import com.vibeclip.entity.User;
+import com.vibeclip.entity.Video;
 import com.vibeclip.exception.AlreadySubscribedException;
 import com.vibeclip.exception.UserNotFoundException;
 import com.vibeclip.repository.SubscriptionRepository;
@@ -127,5 +128,21 @@ public class SubscriptionService {
                 .stream()
                 .map(Subscription::getTarget)
                 .toList();
+    }
+
+    public boolean canViewProfile(User viewer, User author) {
+        if (!author.isPrivateProfile()) {
+            return true;
+        }
+
+        if (viewer != null && viewer.getId().equals(author.getId())) {
+            return true;
+        }
+
+        return isSubscribed(viewer, author);
+    }
+
+    public boolean canViewVideo(User viewer, Video video) {
+        return canViewProfile(viewer, video.getAuthor());
     }
 }

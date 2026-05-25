@@ -35,6 +35,7 @@ public class RecommendationService {
     private final FolderVideoRepository folderVideoRepository;
     private final VideoMetricRepository videoMetricRepository;
     private final ReactionRepository reactionRepository;
+    private final SubscriptionService subscriptionService;
 
 
     @Transactional
@@ -146,12 +147,22 @@ public class RecommendationService {
         int totalSize = pageable.getPageSize();
         Pageable extendedPageable = PageRequest.of(0, totalSize * 10); // Берем больше для выбора
         Page<Video> allVideos = videoRepository.findByStatus(VideoStatus.PUBLISHED, extendedPageable);
+
+        List<Video> visibleVideos = allVideos.getContent()
+                .stream()
+                .filter(video ->
+                        subscriptionService.canViewVideo(
+                                user,
+                                video
+                        )
+                )
+                .toList();
         
         // Разделяем на видео с любимыми хэштегами и остальные
         List<Video> videosWithLikedHashtags = new ArrayList<>();
         List<Video> otherVideos = new ArrayList<>();
-        
-        for (Video video : allVideos.getContent()) {
+
+        for (Video video : visibleVideos) {
             // Проверяем, есть ли у видео хэштеги из лайков
             boolean hasLikedHashtag = false;
             if (video.getHashtags() != null && !video.getHashtags().isEmpty()) {
