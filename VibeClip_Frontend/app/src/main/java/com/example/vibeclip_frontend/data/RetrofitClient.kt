@@ -12,8 +12,15 @@ object RetrofitClient {
     // Используем BASE_URL из BuildConfig, чтобы совпадало с плеером
     private const val BASE_URL = BuildConfig.API_BASE_URL
     
+//    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+//        level = HttpLoggingInterceptor.Level.HEADERS
+//    }
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BASIC
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
     }
     
     private val okHttpClient = OkHttpClient.Builder()
@@ -22,14 +29,29 @@ object RetrofitClient {
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
+
+    /** Длинные таймауты для multipart-загрузки видео (десятки МБ по Wi‑Fi). */
+    private val uploadOkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(loggingInterceptor)
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.MINUTES)
+        .writeTimeout(15, TimeUnit.MINUTES)
+        .build()
     
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
+
+    private val uploadRetrofit = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .client(uploadOkHttpClient)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
     
     val apiService: ApiService = retrofit.create(ApiService::class.java)
+    val uploadApiService: ApiService = uploadRetrofit.create(ApiService::class.java)
 }
 
 

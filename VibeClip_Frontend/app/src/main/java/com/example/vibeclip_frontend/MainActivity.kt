@@ -123,14 +123,16 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun screenLabel(screen: Screen): String = when (screen) {
-        Screen.Feed -> "Лента"
-        is Screen.FeedWithVideo -> "Лента"
-        Screen.Upload -> "Загрузка"
-        Screen.Folders -> "Папки"
-        Screen.Profile -> "Профиль"
-        Screen.Login, Screen.Register -> screen.route
-        is Screen.FolderFeed -> "Папка"
-    }
+    Screen.Feed -> "Лента"
+    is Screen.FeedWithVideo -> "Лента"
+    Screen.Upload -> "Загрузка"
+    Screen.Folders -> "Папки"
+    Screen.Profile -> "Профиль"
+    is Screen.UserProfile -> "Профиль пользователя"  // <-- добавить
+    Screen.Login, Screen.Register -> screen.route
+    is Screen.FolderFeed -> "Папка"
+    // else -> screen.route  // как альтернатива, если не хочешь перечислять все варианты
+}
 
 @Composable
 private fun NavigationIcon(screen: Screen, isSelected: Boolean) {

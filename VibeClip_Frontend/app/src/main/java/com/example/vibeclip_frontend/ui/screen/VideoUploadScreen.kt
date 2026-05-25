@@ -17,9 +17,13 @@ import com.example.vibeclip_frontend.data.repository.VideoRepository
 import com.example.vibeclip_frontend.ui.viewmodel.VideoUploadViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import android.media.MediaMetadataRetriever
-import okhttp3.RequestBody
+import java.io.File
+import okhttp3.RequestBody.Companion.asRequestBody
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.rememberCoroutineScope
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +57,8 @@ fun VideoUploadScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
+
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(uiState.created) {
         if (uiState.created != null) {
@@ -125,29 +131,53 @@ fun VideoUploadScreen(
 
         Button(
             onClick = {
-                val video = videoUri
-                val thumb = thumbUri
-                val dur = durationSec
-                if (video == null) {
-                    Toast.makeText(context, "Выберите видео", Toast.LENGTH_SHORT).show()
-                    return@Button
-                }
-                if (dur == null || dur <= 0 || dur > 180) {
-                    Toast.makeText(context, "Неверная длительность", Toast.LENGTH_SHORT).show()
-                    return@Button
-                }
+                scope.launch(Dispatchers.IO) {
 
-                val videoPart = buildFilePart(context, video, "file", "video/*")
-                val thumbPart = thumb?.let { buildFilePart(context, it, "thumbnail", "image/*") }
+                    val video = videoUri
+                    val thumb = thumbUri
+                    val dur = durationSec
 
-                viewModel.upload(
-                    title = title,
-                    description = description,
-                    hashtags = hashtags,
-                    duration = dur,
-                    filePart = videoPart,
-                    thumbnailPart = thumbPart
-                )
+                    if (video == null) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Выберите видео", Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
+
+                    if (dur == null || dur <= 0 || dur > 180) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Неверная длительность", Toast.LENGTH_SHORT).show()
+                        }
+                        return@launch
+                    }
+
+                    val videoPart = buildFilePart(
+                        context,
+                        video,
+                        "file",
+                        "video/*"
+                    )
+
+                    val thumbPart = thumb?.let {
+                        buildFilePart(
+                            context,
+                            it,
+                            "thumbnail",
+                            "image/*"
+                        )
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        viewModel.upload(
+                            title = title,
+                            description = description,
+                            hashtags = hashtags,
+                            duration = dur,
+                            filePart = videoPart,
+                            thumbnailPart = thumbPart
+                        )
+                    }
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -179,7 +209,7 @@ private fun getDurationSeconds(context: Context, uri: Uri): Int? {
     }
 }
 
-private fun buildFilePart(context: Context, uri: Uri, name: String, defaultMime: String): MultipartBody.Part {
+/*private fun buildFilePart(context: Context, uri: Uri, name: String, defaultMime: String): MultipartBody.Part {
     val cr = context.contentResolver
     val mime = cr.getType(uri) ?: defaultMime
     val input = cr.openInputStream(uri) ?: throw IllegalStateException("Не удалось открыть файл")
@@ -188,5 +218,36 @@ private fun buildFilePart(context: Context, uri: Uri, name: String, defaultMime:
     val requestBody: RequestBody = bytes.toRequestBody(mime.toMediaTypeOrNull())
     val filename = uri.lastPathSegment ?: "upload.bin"
     return MultipartBody.Part.createFormData(name, filename, requestBody)
-}
+}*/
 
+private fun buildFilePart(
+    context: Context,
+    uri: Uri,
+    name: String,
+    defaultMime: String
+): MultipartBody.Part {
+
+    val contentResolver = context.contentResolver
+
+    val mimeType = contentResolver.getType(uri) ?: defaultMime
+
+    val inputStream = contentResolver.openInputStream(uri)
+        ?: throw IllegalStateException("Не удалось открыть файл")
+
+    val tempFile = File.createTempFile("upload", null, context.cacheDir)
+
+    tempFile.outputStream().use { output ->
+        inputStream.use { input ->
+            input.copyTo(output)
+        }
+    }
+
+    val requestBody = tempFile
+        .asRequestBody(mimeType.toMediaTypeOrNull())
+
+    return MultipartBody.Part.createFormData(
+        name,
+        tempFile.name,
+        requestBody
+    )
+}

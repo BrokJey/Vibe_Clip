@@ -11,6 +11,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class VideoRepository {
     private val apiService = RetrofitClient.apiService
+    private val uploadApiService = RetrofitClient.uploadApiService
     
     suspend fun getVideos(
         token: String, 
@@ -84,7 +85,7 @@ class VideoRepository {
         hashtags: String?,
         durationSeconds: Int
     ): Result<VideoResponse> = runCatching {
-        val resp = apiService.uploadVideo(
+        val resp = uploadApiService.uploadVideo(
             token = "Bearer $token",
             file = filePart,
             thumbnail = thumbnailPart,

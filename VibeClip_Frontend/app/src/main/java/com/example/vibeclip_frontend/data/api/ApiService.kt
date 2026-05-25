@@ -1,5 +1,4 @@
 package com.example.vibeclip_frontend.data.api
-
 import com.example.vibeclip_frontend.data.model.*
 import okhttp3.MultipartBody
 import retrofit2.Response
@@ -157,5 +156,58 @@ interface ApiService {
     // User endpoints
     @GET("users/me")
     suspend fun getCurrentUser(@Header("Authorization") token: String): Response<UserResponse>
+
+    @GET("users/{username}")
+    suspend fun getUserProfile(
+        @Header("Authorization") token: String,
+        @Path("username") username: String
+    ): Response<UserProfileResponse>
+
+    @Multipart
+    @POST("users/avatar")
+    suspend fun uploadAvatar(
+        @Header("Authorization") token: String,
+        @Part avatar: MultipartBody.Part
+    ): Response<UserResponse>
+
+    @DELETE("users/avatar")
+    suspend fun deleteAvatar(
+        @Header("Authorization") token: String
+    ): Response<Unit>
+
+    // Subscription endpoints
+    @POST("subscriptions/{targetId}")
+    suspend fun subscribe(
+        @Header("Authorization") token: String,
+        @Path("targetId") targetId: String
+    ): Response<Unit>
+
+    @DELETE("subscriptions/{targetId}")
+    suspend fun unsubscribe(
+        @Header("Authorization") token: String,
+        @Path("targetId") targetId: String
+    ): Response<Unit>
+
+    @GET("subscriptions/requests/outgoing")
+    suspend fun getOutgoingSubscriptionRequests(
+        @Header("Authorization") token: String
+    ): Response<List<SubscriptionRequestResponse>>
+
+    @GET("subscriptions/requests/incoming")
+    suspend fun getIncomingSubscriptionRequests(
+        @Header("Authorization") token: String
+    ): Response<List<SubscriptionRequestResponse>>
+
+    @POST("subscriptions/{subscriberId}/accept")
+    suspend fun acceptSubscription(
+        @Header("Authorization") token: String,
+        @Path("subscriberId") subscriberId: String
+    ): Response<Unit>
+
+    @POST("subscriptions/{subscriberId}/reject")
+    suspend fun rejectSubscription(
+        @Header("Authorization") token: String,
+        @Path("subscriberId") subscriberId: String
+    ): Response<Unit>
 }
 
