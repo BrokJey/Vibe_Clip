@@ -245,9 +245,29 @@ private fun buildFilePart(
     val requestBody = tempFile
         .asRequestBody(mimeType.toMediaTypeOrNull())
 
+    val uploadFileName = resolveUploadFileName(mimeType, name)
+
     return MultipartBody.Part.createFormData(
         name,
-        tempFile.name,
+        uploadFileName,
         requestBody
     )
 }
+
+private fun resolveUploadFileName(mimeType: String, partName: String): String {
+    val mime = mimeType.lowercase()
+    return when (partName) {
+        "thumbnail" -> when {
+            mime.contains("png") -> "thumbnail.png"
+            mime.contains("webp") -> "thumbnail.webp"
+            else -> "thumbnail.jpg"
+        }
+        else -> when {
+            mime.contains("quicktime") -> "video.mov"
+            mime.contains("webm") -> "video.webm"
+            mime.contains("3gpp") -> "video.3gp"
+            else -> "video.mp4"
+        }
+    }
+}
+
