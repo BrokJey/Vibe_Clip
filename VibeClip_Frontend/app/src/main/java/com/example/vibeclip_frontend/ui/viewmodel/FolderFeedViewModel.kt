@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.vibeclip_frontend.data.model.FolderVideoResponse
 import com.example.vibeclip_frontend.data.repository.FolderRepository
+import com.example.vibeclip_frontend.util.ErrorMessages
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -44,7 +45,10 @@ class FolderFeedViewModel(
                     )
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = ErrorMessages.messageOnly(e)
+                    )
                 }
         }
     }

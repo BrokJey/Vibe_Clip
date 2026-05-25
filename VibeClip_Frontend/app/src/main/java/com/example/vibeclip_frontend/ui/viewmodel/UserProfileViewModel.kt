@@ -8,6 +8,8 @@ import com.example.vibeclip_frontend.data.model.VideoResponse
 import com.example.vibeclip_frontend.data.repository.SubscriptionRepository
 import com.example.vibeclip_frontend.data.repository.UserRepository
 import com.example.vibeclip_frontend.di.AppModule
+import com.example.vibeclip_frontend.util.ErrorContext
+import com.example.vibeclip_frontend.util.ErrorMessages
 import com.example.vibeclip_frontend.util.SubscriptionsStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,22 +64,27 @@ class UserProfileViewModel(
             profileResult
                 .onSuccess { profile ->
                     val isOwnProfileById = me != null && me.id == profile.id
-                    val isPending = pendingTargetIds.contains(profile.id)
+                    val stored = subscriptionsStore.getAll().find { it.userId == profile.id }
+                    val (isSubscribed, isPending) = resolveSubscriptionState(
+                        profile = profile,
+                        pendingTargetIds = pendingTargetIds,
+                        stored = stored
+                    )
                     _uiState.value = UserProfileUiState(
                         isLoading = false,
                         profile = profile,
                         isOwnProfile = isOwnProfile || isOwnProfileById,
-                        isSubscribed = profile.subscribed,
-                        isPending = isPending && !profile.subscribed,
+                        isSubscribed = isSubscribed,
+                        isPending = isPending,
                         videos = profile.videos
                     )
-                    if (profile.subscribed || isPending) {
+                    if (isSubscribed || isPending) {
                         subscriptionsStore.add(
                             StoredSubscription(
                                 userId = profile.id,
                                 username = profile.username,
                                 avatarUrl = profile.avatarUrl,
-                                isPending = isPending && !profile.subscribed
+                                isPending = isPending
                             )
                         )
                     }
@@ -85,7 +92,7 @@ class UserProfileViewModel(
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = e.message ?: "Не удалось загрузить профиль"
+                        errorMessage = ErrorMessages.messageOnly(e)
                     )
                 }
         }
@@ -121,26 +128,47 @@ class UserProfileViewModel(
                 .onSuccess {
                     if (wasLinked) {
                         subscriptionsStore.remove(profile.id)
-                    } else {
-                        subscriptionsStore.add(
-                            StoredSubscription(
-                                userId = profile.id,
-                                username = profile.username,
-                                avatarUrl = profile.avatarUrl,
-                                isPending = true
-                            )
-                        )
                     }
                     loadProfile()
+                    _uiState.value = _uiState.value.copy(isSubscriptionActionInProgress = false)
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
-                        errorMessage = e.message ?: "Ошибка подписки",
+                        errorMessage = ErrorMessages.messageOnly(e, ErrorContext.Subscription),
                         isSubscriptionActionInProgress = false
                     )
                 }
-
-            _uiState.value = _uiState.value.copy(isSubscriptionActionInProgress = false)
         }
+    }
+
+    /**
+     * Состояние подписки: API + исходящие заявки + локальный список «Мои подписки».
+     */
+    private fun resolveSubscriptionState(
+        profile: UserProfileResponse,
+        pendingTargetIds: Set<String>,
+        stored: StoredSubscription?
+    ): Pair<Boolean, Boolean> {
+        if (profile.subscribed) {
+            return true to false
+        }
+        val inOutgoing = pendingTargetIds.contains(profile.id)
+
+        if (!profile.privateProfile) {
+            // Публичный профиль: подписка без одобрения
+            if (inOutgoing || stored != null) {
+                return true to false
+            }
+            return false to false
+        }
+
+        // Приватный профиль: только ACCEPTED или активная заявка (есть в outgoing)
+        if (inOutgoing) {
+            return false to true
+        }
+        if (stored != null) {
+            subscriptionsStore.remove(profile.id)
+        }
+        return false to false
     }
 }

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.vibeclip_frontend.data.model.LoginRequest
 import com.example.vibeclip_frontend.data.model.RegisterRequest
 import com.example.vibeclip_frontend.data.repository.AuthRepository
+import com.example.vibeclip_frontend.util.ErrorContext
+import com.example.vibeclip_frontend.util.ErrorMessages
 import com.example.vibeclip_frontend.util.TokenManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +46,7 @@ class AuthViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isSuccess = false,
-                    errorMessage = error.message ?: "Registration failed"
+                    errorMessage = ErrorMessages.messageOnly(error, ErrorContext.AuthRegister)
                 )
             }
         }
@@ -69,7 +71,7 @@ class AuthViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isSuccess = false,
-                    errorMessage = error.message ?: "Login failed"
+                    errorMessage = ErrorMessages.messageOnly(error, ErrorContext.AuthLogin)
                 )
             }
         }

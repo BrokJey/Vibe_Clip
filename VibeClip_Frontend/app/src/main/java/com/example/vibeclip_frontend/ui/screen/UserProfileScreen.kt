@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vibeclip_frontend.data.model.VideoResponse
+import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.components.ProfileHeader
 import com.example.vibeclip_frontend.ui.components.ProfileVideoGrid
 import com.example.vibeclip_frontend.ui.viewmodel.UserProfileViewModel
@@ -72,21 +73,14 @@ fun UserProfileScreen(
                 }
             }
             uiState.errorMessage != null && uiState.profile == null -> {
-                Column(
+                ErrorContent(
+                    message = uiState.errorMessage!!,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(uiState.errorMessage!!, color = MaterialTheme.colorScheme.error)
-                    Button(
-                        onClick = { viewModel.loadProfile() },
-                        modifier = Modifier.padding(top = 12.dp)
-                    ) {
-                        Text("Повторить")
-                    }
-                }
+                        .padding(padding),
+                    showRetry = true,
+                    onRetry = { viewModel.loadProfile() }
+                )
             }
             uiState.profile != null -> {
                 val profile = uiState.profile!!
@@ -106,6 +100,7 @@ fun UserProfileScreen(
                         action = {
                             if (!uiState.isOwnProfile) {
                                 SubscriptionButton(
+                                    isPrivateProfile = profile.privateProfile,
                                     isSubscribed = uiState.isSubscribed,
                                     isPending = uiState.isPending,
                                     isLoading = uiState.isSubscriptionActionInProgress,
@@ -142,18 +137,20 @@ fun UserProfileScreen(
 
 @Composable
 private fun SubscriptionButton(
+    isPrivateProfile: Boolean,
     isSubscribed: Boolean,
     isPending: Boolean,
     isLoading: Boolean,
     onClick: () -> Unit
 ) {
+    val isLinked = isSubscribed || isPending
     val label = when {
-        isSubscribed -> "Отписаться"
-        isPending -> "Заявка отправлена"
+        isLinked -> "Отписаться"
+        isPrivateProfile -> "Отправить заявку"
         else -> "Подписаться"
     }
 
-    if (isSubscribed) {
+    if (isLinked) {
         OutlinedButton(onClick = onClick, enabled = !isLoading) {
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.padding(horizontal = 16.dp))

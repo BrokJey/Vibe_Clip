@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import com.example.vibeclip_frontend.data.model.VideoResponse
 import com.example.vibeclip_frontend.data.repository.VideoRepository
 import com.example.vibeclip_frontend.di.AppModule
+import com.example.vibeclip_frontend.ui.components.ErrorContent
+import com.example.vibeclip_frontend.util.ErrorMessages
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,18 +26,19 @@ fun SingleVideoScreen(
     val videoRepository = remember { AppModule.videoRepository }
     var video by remember { mutableStateOf<VideoResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    
-    LaunchedEffect(videoId) {
+    var errorInfo by remember { mutableStateOf<com.example.vibeclip_frontend.util.UserFacingError?>(null) }
+    var reloadNonce by remember { mutableStateOf(0) }
+
+    LaunchedEffect(videoId, reloadNonce) {
         isLoading = true
-        errorMessage = null
+        errorInfo = null
         videoRepository.getVideo(token, videoId)
             .onSuccess { loadedVideo ->
                 video = loadedVideo
                 isLoading = false
             }
             .onFailure { error ->
-                errorMessage = error.message ?: "Не удалось загрузить видео"
+                errorInfo = ErrorMessages.fromThrowable(error)
                 isLoading = false
             }
     }
@@ -64,23 +67,15 @@ fun SingleVideoScreen(
                     CircularProgressIndicator()
                 }
             }
-            errorMessage != null -> {
-                Box(
+            errorInfo != null -> {
+                ErrorContent(
+                    message = errorInfo!!.message,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(errorMessage!!, color = MaterialTheme.colorScheme.error)
-                        Button(onClick = onBack) {
-                            Text("Назад")
-                        }
-                    }
-                }
+                    showRetry = errorInfo!!.showRetry,
+                    onRetry = { reloadNonce++ }
+                )
             }
             video != null -> {
                 Box(

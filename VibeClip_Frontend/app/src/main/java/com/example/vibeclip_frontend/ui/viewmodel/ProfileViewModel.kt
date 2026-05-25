@@ -13,6 +13,7 @@ import com.example.vibeclip_frontend.data.repository.SubscriptionRepository
 import com.example.vibeclip_frontend.data.repository.UserRepository
 import com.example.vibeclip_frontend.data.repository.VideoRepository
 import com.example.vibeclip_frontend.util.buildImagePart
+import com.example.vibeclip_frontend.util.ErrorMessages
 import com.example.vibeclip_frontend.util.SubscribersStore
 import com.example.vibeclip_frontend.util.SubscriptionsStore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,10 @@ data class ProfileUiState(
     val mySubscriptions: List<StoredSubscription> = emptyList(),
     val mySubscribers: List<StoredSubscription> = emptyList(),
     val pendingSubscriberRequests: List<SubscriberListItem> = emptyList(),
-    val subscribersCount: Long = 0
+    val subscribersCount: Long = 0,
+    val privateProfile: Boolean = false,
+    val isUpdatingPrivacy: Boolean = false,
+    val privacyError: String? = null
 )
 
 class ProfileViewModel(
@@ -59,26 +63,59 @@ class ProfileViewModel(
             val outgoing = subscriptionRepo.getOutgoingRequests(token).getOrNull().orEmpty()
             val pendingIds = outgoing.map { it.subscriberId }.toSet()
 
-            val pendingList = outgoing.map { request ->
+            val pendingList = mutableListOf<StoredSubscription>()
+            val acceptedList = mutableListOf<StoredSubscription>()
+
+            outgoing.forEach { request ->
                 val profile = userRepo.getProfile(token, request.username).getOrNull()
-                StoredSubscription(
+                val isPrivate = profile?.privateProfile != false
+                val item = StoredSubscription(
                     userId = request.subscriberId,
                     username = request.username,
                     avatarUrl = profile?.avatarUrl,
-                    isPending = true
-                ).also { subscriptionsStore.add(it) }
+                    isPending = isPrivate
+                )
+                if (isPrivate) {
+                    subscriptionsStore.add(item)
+                    pendingList.add(item)
+                } else {
+                    val accepted = item.copy(isPending = false)
+                    subscriptionsStore.add(accepted)
+                    acceptedList.add(accepted)
+                }
             }
 
-            val acceptedList = subscriptionsStore.getAll()
-                .filter { it.userId !in pendingIds }
-                .map { stored ->
+            subscriptionsStore.getAll()
+                .filter { stored ->
+                    pendingList.none { it.userId == stored.userId } &&
+                        acceptedList.none { it.userId == stored.userId }
+                }
+                .forEach { stored ->
+                    if (stored.userId in pendingIds) return@forEach
                     val profile = userRepo.getProfile(token, stored.username).getOrNull()
-                    val updated = stored.copy(
-                        avatarUrl = profile?.avatarUrl ?: stored.avatarUrl,
-                        isPending = false
-                    )
-                    subscriptionsStore.add(updated)
-                    updated
+                    val isPrivate = profile?.privateProfile != false
+                    when {
+                        profile?.subscribed == true -> {
+                            val updated = stored.copy(
+                                avatarUrl = profile.avatarUrl ?: stored.avatarUrl,
+                                isPending = false
+                            )
+                            subscriptionsStore.add(updated)
+                            acceptedList.add(updated)
+                        }
+                        !isPrivate -> {
+                            val updated = stored.copy(
+                                avatarUrl = profile?.avatarUrl ?: stored.avatarUrl,
+                                isPending = false
+                            )
+                            subscriptionsStore.add(updated)
+                            acceptedList.add(updated)
+                        }
+                        else -> {
+                            // Приватный: нет в outgoing и не подписан — заявка отклонена
+                            subscriptionsStore.remove(stored.userId)
+                        }
+                    }
                 }
 
             _uiState.value = _uiState.value.copy(
@@ -140,7 +177,7 @@ class ProfileViewModel(
                     loadSubscribers()
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(errorMessage = ErrorMessages.messageOnly(e))
                 }
         }
     }
@@ -153,7 +190,7 @@ class ProfileViewModel(
                     loadSubscribers()
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(errorMessage = ErrorMessages.messageOnly(e))
                 }
         }
     }
@@ -161,6 +198,28 @@ class ProfileViewModel(
     fun enrichSubscriptionsAvatars() {
         viewModelScope.launch {
             loadSubscriptions()
+        }
+    }
+
+    fun setPrivateProfile(enabled: Boolean) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isUpdatingPrivacy = true,
+                privacyError = null
+            )
+            userRepo.updatePrivacy(token, enabled)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        privateProfile = enabled,
+                        isUpdatingPrivacy = false
+                    )
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isUpdatingPrivacy = false,
+                        privacyError = ErrorMessages.messageOnly(e)
+                    )
+                }
         }
     }
 
@@ -172,6 +231,7 @@ class ProfileViewModel(
                     _uiState.value = _uiState.value.copy(isLoading = false, user = user)
                     userRepo.getProfile(token, user.username)
                         .onSuccess { profile ->
+                            _uiState.value = _uiState.value.copy(privateProfile = profile.privateProfile)
                             subscriptionsStore.updateAvatar(user.id, profile.avatarUrl)
                             refreshSubscriptions()
                             enrichSubscriptionsAvatars()
@@ -179,7 +239,10 @@ class ProfileViewModel(
                     loadSubscribers()
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = ErrorMessages.messageOnly(e)
+                    )
                 }
         }
     }
@@ -198,7 +261,7 @@ class ProfileViewModel(
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         isSavingProfile = false,
-                        profileSaveError = e.message
+                        profileSaveError = ErrorMessages.messageOnly(e)
                     )
                     return@launch
                 }
@@ -238,7 +301,7 @@ class ProfileViewModel(
                         .onFailure { e2 ->
                             _uiState.value = _uiState.value.copy(
                                 isLoadingVideos = false,
-                                errorMessage = e2.message ?: "Не удалось загрузить видео"
+                                errorMessage = ErrorMessages.messageOnly(e2)
                             )
                         }
                 }
@@ -261,7 +324,7 @@ class ProfileViewModel(
                     onSuccess()
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(errorMessage = ErrorMessages.messageOnly(e))
                 }
         }
     }
@@ -276,7 +339,7 @@ class ProfileViewModel(
                     onSuccess(updated)
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(errorMessage = ErrorMessages.messageOnly(e))
                 }
         }
     }

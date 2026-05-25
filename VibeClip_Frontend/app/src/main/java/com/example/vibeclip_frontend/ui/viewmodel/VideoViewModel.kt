@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.vibeclip_frontend.data.model.VideoListResponse
 import com.example.vibeclip_frontend.data.model.VideoResponse
 import com.example.vibeclip_frontend.data.repository.VideoRepository
+import com.example.vibeclip_frontend.util.ErrorMessages
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -13,6 +14,7 @@ data class VideoUiState(
     val isLoading: Boolean = false,
     val videos: List<VideoResponse> = emptyList(),
     val errorMessage: String? = null,
+    val errorShowRetry: Boolean = false,
     val currentPage: Int = 0,
     val hasMore: Boolean = true
 )
@@ -31,7 +33,11 @@ class VideoViewModel(
     
     fun loadVideos(page: Int = 0) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                errorShowRetry = false
+            )
             
             // Используем систему рекомендаций для главной ленты
             // recommended=true включает персональные рекомендации на основе лайков пользователя
@@ -80,9 +86,11 @@ class VideoViewModel(
                     hasMore = response.pageNumber < response.totalPages - 1
                 )
             }.onFailure { error ->
+                val err = ErrorMessages.fromThrowable(error)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = error.message ?: "Failed to load videos"
+                    errorMessage = err.message,
+                    errorShowRetry = err.showRetry
                 )
             }
         }
