@@ -163,6 +163,12 @@ interface ApiService {
         @Path("username") username: String
     ): Response<UserProfileResponse>
 
+    @PATCH("users/privacy")
+    suspend fun updatePrivacy(
+        @Header("Authorization") token: String,
+        @Body request: UpdatePrivacyRequest
+    ): Response<UserResponse>
+
     @Multipart
     @POST("users/avatar")
     suspend fun uploadAvatar(

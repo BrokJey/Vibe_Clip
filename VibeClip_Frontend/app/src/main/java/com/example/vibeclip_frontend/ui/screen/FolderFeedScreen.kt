@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.vibeclip_frontend.data.repository.FolderRepository
+import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.viewmodel.FolderFeedViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -63,12 +64,14 @@ fun FolderFeedScreen(
                 ) { CircularProgressIndicator() }
             }
             uiState.errorMessage != null && uiState.videos.isEmpty() -> {
-                Box(
+                ErrorContent(
+                    message = uiState.errorMessage!!,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) { Text(uiState.errorMessage!!, color = MaterialTheme.colorScheme.error) }
+                    showRetry = true,
+                    onRetry = { viewModel.loadPage() }
+                )
             }
             uiState.videos.isEmpty() -> {
                 Box(

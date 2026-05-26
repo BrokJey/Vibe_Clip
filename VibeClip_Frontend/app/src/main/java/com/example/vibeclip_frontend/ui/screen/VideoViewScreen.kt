@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.vibeclip_frontend.data.repository.VideoRepository
 import com.example.vibeclip_frontend.di.AppModule
+import com.example.vibeclip_frontend.ui.components.ErrorContent
+import com.example.vibeclip_frontend.util.ErrorMessages
+import com.example.vibeclip_frontend.util.UserFacingError
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,25 +26,24 @@ fun VideoViewScreen(
     val videoRepository = remember { AppModule.videoRepository }
     var video by remember { mutableStateOf<com.example.vibeclip_frontend.data.model.VideoResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var errorInfo by remember { mutableStateOf<UserFacingError?>(null) }
+    var reloadNonce by remember { mutableStateOf(0) }
 
-    LaunchedEffect(videoId) {
+    LaunchedEffect(videoId, reloadNonce) {
         isLoading = true
-        errorMessage = null
-        
-        // Публичный endpoint доступен без токена, но если токен есть - используем его
+        errorInfo = null
+
         val result = if (token != null) {
             videoRepository.getVideo(token, videoId)
         } else {
-            // Публичный запрос - используем пустой токен (endpoint доступен без аутентификации)
             videoRepository.getVideo("", videoId)
         }
-        
+
         result.onSuccess { loadedVideo ->
             video = loadedVideo
             isLoading = false
         }.onFailure { error ->
-            errorMessage = error.message ?: "Не удалось загрузить видео"
+            errorInfo = ErrorMessages.fromThrowable(error)
             isLoading = false
         }
     }
@@ -71,23 +73,13 @@ fun VideoViewScreen(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                errorMessage != null -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = errorMessage!!,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = onBack) {
-                            Text("Назад")
-                        }
-                    }
+                errorInfo != null -> {
+                    ErrorContent(
+                        message = errorInfo!!.message,
+                        modifier = Modifier.fillMaxSize(),
+                        showRetry = errorInfo!!.showRetry,
+                        onRetry = { reloadNonce++ }
+                    )
                 }
                 video != null -> {
                     // Используем VideoFullScreenCard из FeedScreen для отображения видео

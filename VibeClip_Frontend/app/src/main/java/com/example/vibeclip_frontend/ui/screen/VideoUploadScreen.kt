@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vibeclip_frontend.data.repository.VideoRepository
+import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.viewmodel.VideoUploadViewModel
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -123,9 +124,9 @@ fun VideoUploadScreen(
         )
 
         if (uiState.errorMessage != null) {
-            Text(
-                text = uiState.errorMessage!!,
-                color = MaterialTheme.colorScheme.error
+            ErrorContent(
+                message = uiState.errorMessage!!,
+                modifier = Modifier.fillMaxWidth()
             )
         }
 

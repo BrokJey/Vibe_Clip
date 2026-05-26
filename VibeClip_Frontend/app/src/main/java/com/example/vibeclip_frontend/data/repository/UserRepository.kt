@@ -1,6 +1,7 @@
 package com.example.vibeclip_frontend.data.repository
 
 import com.example.vibeclip_frontend.data.RetrofitClient
+import com.example.vibeclip_frontend.data.model.UpdatePrivacyRequest
 import com.example.vibeclip_frontend.data.model.UserProfileResponse
 import com.example.vibeclip_frontend.data.model.UserResponse
 import okhttp3.MultipartBody
@@ -23,6 +24,15 @@ class UserRepository {
                 resp.errorBody()?.string().orEmpty().ifBlank { resp.message() }
             )
         }
+    }
+
+    suspend fun updatePrivacy(token: String, privateProfile: Boolean): Result<UserResponse> = runCatching {
+        val resp = apiService.updatePrivacy(
+            "Bearer $token",
+            UpdatePrivacyRequest(privateProfile = privateProfile)
+        )
+        if (resp.isSuccessful && resp.body() != null) resp.body()!!
+        else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
     }
 
     suspend fun uploadAvatar(token: String, avatarPart: MultipartBody.Part): Result<UserResponse> = runCatching {

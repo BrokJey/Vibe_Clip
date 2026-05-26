@@ -41,7 +41,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import com.example.vibeclip_frontend.data.model.VideoResponse
 import com.example.vibeclip_frontend.data.repository.VideoRepository
+import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.viewmodel.VideoViewModel
+import com.example.vibeclip_frontend.util.ErrorMessages
+import com.example.vibeclip_frontend.util.UserFacingError
 import com.example.vibeclip_frontend.BuildConfig
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -145,23 +148,14 @@ fun FeedScreen(
                 }
             }
             uiState.errorMessage != null && uiState.videos.isEmpty() -> {
-                Column(
+                ErrorContent(
+                    message = uiState.errorMessage!!,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = uiState.errorMessage!!,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { viewModel.refresh() }) {
-                        Text("Retry")
-                    }
-                }
+                        .padding(padding),
+                    showRetry = uiState.errorShowRetry,
+                    onRetry = { viewModel.refresh() }
+                )
             }
             else -> {
                 if (uiState.videos.isEmpty()) {
@@ -500,7 +494,8 @@ fun VideoFullScreenCard(
             repeatMode = Player.REPEAT_MODE_ONE
         }
     }
-    var playbackError by remember { mutableStateOf<String?>(null) }
+    var playbackError by remember { mutableStateOf<UserFacingError?>(null) }
+    var playbackRetryNonce by remember { mutableStateOf(0) }
     var isBuffering by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableStateOf(0L) }
@@ -508,23 +503,24 @@ fun VideoFullScreenCard(
     var isDraggingProgress by remember { mutableStateOf(false) }
 
     // Инициализация видео
-    LaunchedEffect(resolvedUrl) {
+    LaunchedEffect(resolvedUrl, playbackRetryNonce) {
         playbackError = null
         isBuffering = true
         if (resolvedUrl != null) {
             try {
                 Log.d("FeedScreen", "Preparing video: $resolvedUrl")
+                exoPlayer.stop()
+                exoPlayer.clearMediaItems()
                 exoPlayer.setMediaItem(MediaItem.fromUri(resolvedUrl))
                 exoPlayer.prepare()
-                // Не начинаем воспроизведение сразу - только если активно
                 exoPlayer.playWhenReady = false
             } catch (e: Exception) {
                 Log.e("FeedScreen", "Error preparing video", e)
-                playbackError = "Ошибка подготовки: ${e.message}"
+                playbackError = ErrorMessages.fromThrowable(e)
                 isBuffering = false
             }
         } else {
-            playbackError = "Видео URL пустой"
+            playbackError = UserFacingError(ErrorMessages.VIDEO_UNAVAILABLE, showRetry = false)
             isBuffering = false
         }
     }
@@ -601,19 +597,8 @@ fun VideoFullScreenCard(
 
             override fun onPlayerErrorChanged(error: PlaybackException?) {
                 if (error != null) {
-                    val errorMessage = when {
-                        error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> 
-                            "Ошибка сети. Проверьте подключение к интернету."
-                        error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> 
-                            "Таймаут подключения. Проверьте доступность сервера."
-                        error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED -> 
-                            "Неподдерживаемый формат видео."
-                        error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> 
-                            "Видеофайл не найден: $resolvedUrl"
-                        else -> error.message ?: "Неизвестная ошибка (код: ${error.errorCode})"
-                    }
                     Log.e("FeedScreen", "Player error: ${error.errorCode}, message: ${error.message}", error)
-                    playbackError = errorMessage
+                    playbackError = ErrorMessages.fromPlaybackError(error)
                     isBuffering = false
                 }
             }
@@ -680,35 +665,18 @@ fun VideoFullScreenCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0x88000000)),
+                    .background(Color(0xCC000000)),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Ошибка воспроизведения: $err",
-                        color = Color.White,
-                        fontSize = 16.sp
-                    )
-                    if (resolvedUrl != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "URL: $resolvedUrl",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 12.sp
-                        )
+                ErrorContent(
+                    message = err.message,
+                    textColor = Color.White,
+                    showRetry = err.showRetry,
+                    onRetry = {
+                        playbackError = null
+                        playbackRetryNonce++
                     }
-                    if (video.videoUrl.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Исходный URL: ${video.videoUrl}",
-                            color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 10.sp
-                        )
-                    }
-                }
+                )
             }
         }
 

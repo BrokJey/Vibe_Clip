@@ -6,6 +6,7 @@ import com.example.vibeclip_frontend.data.model.FolderRequest
 import com.example.vibeclip_frontend.data.model.FolderResponse
 import com.example.vibeclip_frontend.data.model.FolderPreferenceRequest
 import com.example.vibeclip_frontend.data.repository.FolderRepository
+import com.example.vibeclip_frontend.util.ErrorMessages
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -33,7 +34,10 @@ class FolderViewModel(
                     _uiState.value = _uiState.value.copy(isLoading = false, folders = folders)
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = ErrorMessages.messageOnly(e)
+                    )
                 }
         }
     }
@@ -72,7 +76,10 @@ class FolderViewModel(
                     )
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = ErrorMessages.messageOnly(e)
+                    )
                 }
         }
     }
@@ -109,7 +116,10 @@ class FolderViewModel(
                     folders = _uiState.value.folders.map { if (it.id == updated.id) updated else it }
                 )
             }.onFailure { e ->
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = ErrorMessages.messageOnly(e)
+                )
             }
         }
     }
@@ -125,7 +135,10 @@ class FolderViewModel(
                     )
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = ErrorMessages.messageOnly(e)
+                    )
                 }
         }
     }
@@ -142,7 +155,10 @@ class FolderViewModel(
                     )
                 }
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = ErrorMessages.messageOnly(e)
+                    )
                 }
         }
     }
@@ -152,7 +168,7 @@ class FolderViewModel(
             // Просто дергаем regenerate, ошибки показываем, список папок не меняем
             repo.regenerateFeed(token, folderId, limit)
                 .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(errorMessage = e.message)
+                    _uiState.value = _uiState.value.copy(errorMessage = ErrorMessages.messageOnly(e))
                 }
         }
     }

@@ -43,6 +43,7 @@ import com.example.vibeclip_frontend.data.model.VideoResponse
 import com.example.vibeclip_frontend.data.repository.UserRepository
 import com.example.vibeclip_frontend.data.repository.VideoRepository
 import com.example.vibeclip_frontend.di.AppModule
+import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.components.ProfileHeader
 import com.example.vibeclip_frontend.ui.components.ProfileVideoGrid
 import com.example.vibeclip_frontend.ui.viewmodel.ProfileViewModel
@@ -79,6 +80,7 @@ fun ProfileScreen(
     var showSubscriptionsDialog by remember { mutableStateOf(false) }
     var showSubscribersDialog by remember { mutableStateOf(false) }
     var showAvatarEdit by remember { mutableStateOf(false) }
+    var showPrivacyConfirm by remember { mutableStateOf(false) }
 
     if (showSubscriptionsDialog) {
         UsersListDialog(
@@ -92,6 +94,16 @@ fun ProfileScreen(
             onUserClick = { username ->
                 showSubscriptionsDialog = false
                 onNavigateToUser(username)
+            }
+        )
+    }
+
+    if (showPrivacyConfirm) {
+        PrivacyConfirmSheet(
+            onDismiss = { showPrivacyConfirm = false },
+            onConfirm = {
+                showPrivacyConfirm = false
+                viewModel.setPrivateProfile(true)
             }
         )
     }
@@ -121,7 +133,22 @@ fun ProfileScreen(
         topBar = {
             TopAppBar(
                 modifier = Modifier.padding(top = 8.dp),
-                title = { Text("Профиль") },
+                title = {
+                    Column {
+                        Text("Профиль")
+                        ProfilePrivacyToggle(
+                            checked = uiState.privateProfile,
+                            enabled = !uiState.isUpdatingPrivacy,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    showPrivacyConfirm = true
+                                } else {
+                                    viewModel.setPrivateProfile(false)
+                                }
+                            }
+                        )
+                    }
+                },
                 actions = {
                     TextButton(onClick = onLogout) { Text("Выход") }
                 }
@@ -136,16 +163,12 @@ fun ProfileScreen(
                 ) { CircularProgressIndicator() }
             }
             uiState.errorMessage != null && user == null -> {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(uiState.errorMessage!!, color = MaterialTheme.colorScheme.error)
-                    Button(onClick = { viewModel.refresh() }, modifier = Modifier.padding(top = 12.dp)) {
-                        Text("Повторить")
-                    }
-                }
+                ErrorContent(
+                    message = uiState.errorMessage!!,
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    showRetry = true,
+                    onRetry = { viewModel.refresh() }
+                )
             }
             user != null -> {
                 Column(modifier = Modifier.fillMaxSize().padding(padding)) {

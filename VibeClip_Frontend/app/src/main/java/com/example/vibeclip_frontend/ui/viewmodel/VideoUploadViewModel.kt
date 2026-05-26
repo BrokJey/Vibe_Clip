@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.vibeclip_frontend.data.model.VideoResponse
 import com.example.vibeclip_frontend.data.repository.VideoRepository
+import com.example.vibeclip_frontend.util.ErrorContext
+import com.example.vibeclip_frontend.util.ErrorMessages
 import okhttp3.MultipartBody
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +14,7 @@ import kotlinx.coroutines.launch
 data class VideoUploadUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val errorShowRetry: Boolean = false,
     val created: VideoResponse? = null
 )
 
@@ -32,7 +35,12 @@ class VideoUploadViewModel(
         thumbnailPart: MultipartBody.Part?
     ) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, created = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                errorShowRetry = false,
+                created = null
+            )
             repo.uploadVideo(
                 token = token,
                 filePart = filePart,
@@ -44,7 +52,12 @@ class VideoUploadViewModel(
             ).onSuccess { video ->
                 _uiState.value = _uiState.value.copy(isLoading = false, created = video)
             }.onFailure { e ->
-                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+                val err = ErrorMessages.fromThrowable(e, ErrorContext.VideoUpload)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = err.message,
+                    errorShowRetry = err.showRetry
+                )
             }
         }
     }
