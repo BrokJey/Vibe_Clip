@@ -62,6 +62,12 @@ public class RecommendationService {
 
         List<Video> newCandidates = candidates.getContent().stream()
                 .filter(video -> !existingVideoIds.contains(video.getId()))
+                .filter(video ->
+                        subscriptionService.canViewVideo(
+                                folder.getOwner(),
+                                video
+                        )
+                )
                 .collect(Collectors.toList());
         
         log.debug("После исключения существующих видео осталось {} новых кандидатов", newCandidates.size());
