@@ -9,11 +9,7 @@ import com.vibeclip.dto.video.VideoResponse;
 import com.vibeclip.entity.ReactionType;
 import com.vibeclip.entity.User;
 import com.vibeclip.entity.VideoStatus;
-import com.vibeclip.service.JwtService;
-import com.vibeclip.service.ReactionService;
-import com.vibeclip.service.UserService;
-import com.vibeclip.service.VideoMetricService;
-import com.vibeclip.service.VideoService;
+import com.vibeclip.service.*;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +66,9 @@ class VideoControllerTest {
 
     @MockBean
     private ReactionService reactionService;
+
+    @MockBean
+    private VideoReportService videoReportService;
 
     @MockBean
     private UserService userService;

@@ -7,10 +7,7 @@ import com.vibeclip.dto.video.VideoResponse;
 import com.vibeclip.dto.video.VideoMetricsResponse;
 import com.vibeclip.entity.User;
 import com.vibeclip.entity.VideoStatus;
-import com.vibeclip.service.ReactionService;
-import com.vibeclip.service.UserService;
-import com.vibeclip.service.VideoMetricService;
-import com.vibeclip.service.VideoService;
+import com.vibeclip.service.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,17 +29,19 @@ public class VideoController extends BaseController {
     private final VideoService videoService;
     private final VideoMetricService videoMetricService;
     private final ReactionService reactionService;
+    private final VideoReportService videoReportService;
 
     public VideoController(
             UserService userService,
             VideoService videoService,
             VideoMetricService videoMetricService,
-            ReactionService reactionService
+            ReactionService reactionService, VideoReportService videoReportService
     ) {
         super(userService);
         this.videoService = videoService;
         this.videoMetricService = videoMetricService;
         this.reactionService = reactionService;
+        this.videoReportService = videoReportService;
     }
 
     // Создание нового видео
@@ -253,6 +252,19 @@ public class VideoController extends BaseController {
         Pageable pageable = PageRequest.of(page, size);
 
         return ResponseEntity.ok(videoService.getMixedFeed(user, pageable));
+    }
+
+    @PostMapping("/{id}/report")
+    public ResponseEntity<Void> reportVideo(
+            @PathVariable UUID id,
+            @RequestParam String reason,
+            Authentication authentication
+    ) {
+        User user = getCurrentUser(authentication);
+
+        videoReportService.reportVideo(user, id, reason);
+
+        return ResponseEntity.ok().build();
     }
 }
 

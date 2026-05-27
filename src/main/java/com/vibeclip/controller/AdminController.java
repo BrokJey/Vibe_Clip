@@ -1,13 +1,13 @@
 package com.vibeclip.controller;
 
 import com.vibeclip.dto.video.VideoResponse;
-import com.vibeclip.entity.User;
-import com.vibeclip.entity.Video;
-import com.vibeclip.entity.VideoStatus;
+import com.vibeclip.entity.*;
 import com.vibeclip.mapper.VideoMapper;
 import com.vibeclip.repository.ReactionRepository;
+import com.vibeclip.repository.VideoReportRepository;
 import com.vibeclip.repository.VideoRepository;
 import com.vibeclip.service.UserService;
+import com.vibeclip.service.VideoReportService;
 import com.vibeclip.service.VideoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,19 +30,23 @@ public class AdminController extends BaseController {
     private final VideoRepository videoRepository;
     private final VideoMapper videoMapper;
     private final ReactionRepository reactionRepository;
+    private final VideoReportRepository videoReportRepository;
+    private final VideoReportService videoReportService;
 
     public AdminController(
             UserService userService,
             VideoService videoService,
             VideoRepository videoRepository,
             VideoMapper videoMapper,
-            ReactionRepository reactionRepository
+            ReactionRepository reactionRepository, VideoReportRepository videoReportRepository, VideoReportService videoReportService
     ) {
         super(userService);
         this.videoService = videoService;
         this.videoRepository = videoRepository;
         this.videoMapper = videoMapper;
         this.reactionRepository = reactionRepository;
+        this.videoReportRepository = videoReportRepository;
+        this.videoReportService = videoReportService;
     }
 
     // Получение списка видео на модерации с пагинацией
@@ -102,18 +107,15 @@ public class AdminController extends BaseController {
 
     // Получение видео с репортами (видео, на которые пожаловались пользователи)
     @GetMapping("/moderation/videos/reported")
-    public ResponseEntity<Page<VideoResponse>> getReportedVideos(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size);
-        
-        // Находим видео, на которые есть реакции типа REPORT
-        // Это упрощенная версия - в реальности нужен более сложный запрос
-        Page<Video> videos = videoRepository.findByStatus(VideoStatus.PUBLISHED, pageable);
-        Page<VideoResponse> response = videos.map(videoMapper::toDTO);
-        
-        return ResponseEntity.ok(response);
+    public ResponseEntity<List<VideoResponse>> getReportedVideos() {
+
+        List<Video> videos = videoReportRepository.findReportedVideos(ReportStatus.PENDING);
+
+        return ResponseEntity.ok(
+                videos.stream()
+                        .map(videoMapper::toDTO)
+                        .toList()
+        );
     }
 
     // Удаление видео администратором (полное удаление без проверки авторства)
@@ -121,6 +123,19 @@ public class AdminController extends BaseController {
     public ResponseEntity<Void> deleteVideo(@PathVariable UUID id) {
         videoService.deleteByAdmin(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/moderation/reports/{id}/resolve")
+    public ResponseEntity<Void> resolveReport(@PathVariable UUID id) {
+
+        VideoReport report = videoReportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Report not found"));
+
+        report.setStatus(ReportStatus.REVIEWED);
+
+        videoReportRepository.save(report);
+
+        return ResponseEntity.ok().build();
     }
 }
 

@@ -1,0 +1,78 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 5-0-create-video-reports
+      author: vibeclip
+      changes:
+
+        - createTable:
+            tableName: video_reports
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: video_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: reporter_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: reason
+                  type: VARCHAR(500)
+
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+
+        - addForeignKeyConstraint:
+            baseTableName: video_reports
+            baseColumnNames: video_id
+            referencedTableName: videos
+            referencedColumnNames: id
+            constraintName: fk_video_reports_video
+
+        - addForeignKeyConstraint:
+            baseTableName: video_reports
+            baseColumnNames: reporter_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_video_reports_user
+
+        - createIndex:
+            indexName: idx_video_reports_video_id
+            tableName: video_reports
+            columns:
+              - column:
+                  name: video_id
+
+        - createIndex:
+            indexName: idx_video_reports_status
+            tableName: video_reports
+            columns:
+              - column:
+                  name: status
+
+        - createIndex:
+            indexName: idx_video_reports_reporter_id
+            tableName: video_reports
+            columns:
+              - column:
+                  name: reporter_id

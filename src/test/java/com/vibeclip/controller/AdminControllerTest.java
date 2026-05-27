@@ -1,6 +1,8 @@
 package com.vibeclip.controller;
 
 import com.vibeclip.config.SecurityConfig;
+import com.vibeclip.entity.ReportStatus;
+import com.vibeclip.repository.VideoReportRepository;
 import com.vibeclip.service.JwtService;
 
 import com.vibeclip.controller.AdminController;
@@ -12,6 +14,7 @@ import com.vibeclip.mapper.VideoMapper;
 import com.vibeclip.repository.ReactionRepository;
 import com.vibeclip.repository.VideoRepository;
 import com.vibeclip.service.UserService;
+import com.vibeclip.service.VideoReportService;
 import com.vibeclip.service.VideoService;
 
 import org.junit.jupiter.api.Test;
@@ -59,6 +62,10 @@ public class AdminControllerTest {
     private ReactionRepository reactionRepository;
     @MockBean
     private UserService userService;
+    @MockBean
+    private VideoReportRepository videoReportRepository;
+    @MockBean
+    private VideoReportService videoReportService;
 
     @MockBean
     private JwtService jwtService;
@@ -254,35 +261,18 @@ public class AdminControllerTest {
         response.setId(video.getId());
         response.setStatus(video.getStatus());
 
-        Page<Video> videoPage = new PageImpl<>(List.of(video));
+        List<Video> videos = List.of(video);
 
-        when(videoRepository.findByStatus(eq(VideoStatus.PUBLISHED), any(Pageable.class))).thenReturn(videoPage);
+        when(videoReportRepository.findReportedVideos(ReportStatus.PENDING)).thenReturn(videos);
         when(videoMapper.toDTO(video)).thenReturn(response);
         when(userService.findByEmail("admin@test.com")).thenReturn(Optional.of(new User()));
 
-        mockMvc.perform(get("/api/v1/admin/moderation/videos/reported")
-                        .param("page", "0")
-                        .param("size", "20"))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/admin/moderation/videos/reported"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(video.getId().toString()));
 
-        verify(videoRepository).findByStatus(eq(VideoStatus.PUBLISHED), any(Pageable.class));
+        verify(videoReportRepository).findReportedVideos(ReportStatus.PENDING);
         verify(videoMapper).toDTO(video);
-    }
-
-    @Test
-    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
-    void getReportedVideos_shouldUsePageable() throws Exception {
-        Page<Video> videoPage = new PageImpl<>(List.of());
-
-        when(videoRepository.findByStatus(eq(VideoStatus.PUBLISHED), any(Pageable.class))).thenReturn(videoPage);
-        when(userService.findByEmail("admin@test.com")).thenReturn(Optional.of(new User()));
-
-        mockMvc.perform(get("/api/v1/admin/moderation/videos/reported")
-                        .param("page", "2")
-                        .param("size", "10"))
-                .andExpect(status().isOk());
-
-        verify(videoRepository).findByStatus(eq(VideoStatus.PUBLISHED), any(Pageable.class));
     }
 
     @Test

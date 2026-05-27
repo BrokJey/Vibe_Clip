@@ -33,6 +33,8 @@ public class RecommendationServiceTest {
     private VideoMetricRepository videoMetricRepository;
     @Mock
     private ReactionRepository reactionRepository;
+    @Mock
+    private SubscriptionService subscriptionService;
 
     @InjectMocks
     private RecommendationService recommendationService;
@@ -41,6 +43,10 @@ public class RecommendationServiceTest {
     void generateFeedForFolder_success_withoutHashtags() {
         Folder folder = new Folder();
         folder.setId(UUID.randomUUID());
+
+        User owner = new User();
+        owner.setId(UUID.randomUUID());
+        folder.setOwner(owner);
 
         FolderPreference preference = new FolderPreference();
         preference.setAllowedHashtags(null);
@@ -56,6 +62,7 @@ public class RecommendationServiceTest {
         when(folderVideoRepository.findByFolder(folder)).thenReturn(List.of());
         when(videoRepository.findByStatus(eq(VideoStatus.PUBLISHED), any())).thenReturn(page);
         when(folderVideoRepository.save(any(FolderVideo.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptionService.canViewVideo(eq(owner), any(Video.class))).thenReturn(true);
 
         List<FolderVideo> result = recommendationService.generateFeedForFolder(folder, 2);
 
@@ -70,6 +77,10 @@ public class RecommendationServiceTest {
         Folder folder = new Folder();
         folder.setId(UUID.randomUUID());
 
+        User owner = new User();
+        owner.setId(UUID.randomUUID());
+        folder.setOwner(owner);
+
         FolderPreference preference = new FolderPreference();
         preference.setAllowedHashtags(Set.of("java", "spring"));
         folder.setPreference(preference);
@@ -82,6 +93,7 @@ public class RecommendationServiceTest {
         when(folderVideoRepository.findByFolder(folder)).thenReturn(List.of());
         when(videoRepository.findByHashtagsIn(anyList(), eq(VideoStatus.PUBLISHED), any())).thenReturn(page);
         when(folderVideoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptionService.canViewVideo(eq(owner), any(Video.class))).thenReturn(true);
 
         List<FolderVideo> result = recommendationService.generateFeedForFolder(folder, 1);
 
@@ -94,6 +106,10 @@ public class RecommendationServiceTest {
     void generateFeedForFolder_shouldExcludeExistingVideos() {
         Folder folder = new Folder();
         folder.setId(UUID.randomUUID());
+
+        User owner = new User();
+        owner.setId(UUID.randomUUID());
+        folder.setOwner(owner);
 
         Video existingVideo = new Video();
         existingVideo.setId(UUID.randomUUID());
@@ -109,6 +125,7 @@ public class RecommendationServiceTest {
         when(folderVideoRepository.findByFolder(folder)).thenReturn(List.of(existing));
         when(videoRepository.findByStatus(any(), any())).thenReturn(page);
         when(folderVideoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptionService.canViewVideo(eq(owner), any(Video.class))).thenReturn(true);
 
         List<FolderVideo> result = recommendationService.generateFeedForFolder(folder, 5);
 
@@ -120,6 +137,10 @@ public class RecommendationServiceTest {
     void generateFeedForFolder_shouldSetCorrectPosition() {
         Folder folder = new Folder();
         folder.setId(UUID.randomUUID());
+
+        User owner = new User();
+        owner.setId(UUID.randomUUID());
+        folder.setOwner(owner);
 
         Video existingVideo = new Video();
         existingVideo.setId(UUID.randomUUID());
@@ -136,6 +157,8 @@ public class RecommendationServiceTest {
         when(folderVideoRepository.findByFolder(folder)).thenReturn(List.of(existing));
         when(videoRepository.findByStatus(any(), any())).thenReturn(page);
         when(folderVideoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptionService.canViewVideo(eq(owner), any(Video.class))).thenReturn(true);
+        
         List<FolderVideo> result = recommendationService.generateFeedForFolder(folder, 1);
 
         assertEquals(11, result.get(0).getPosition());
