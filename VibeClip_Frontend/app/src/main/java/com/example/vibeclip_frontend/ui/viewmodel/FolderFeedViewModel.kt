@@ -8,6 +8,7 @@ import com.example.vibeclip_frontend.util.ErrorMessages
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 data class FolderFeedUiState(
     val isLoading: Boolean = false,
@@ -31,14 +32,45 @@ class FolderFeedViewModel(
         loadPage()
     }
 
-    fun loadPage(limit: Int = 20) {
+    fun reload() {
+        loadPage(limit = 20, shuffle = true)
+    }
+
+    fun loadPage(limit: Int = 20, shuffle: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val previousFirstId = _uiState.value.videos.firstOrNull()?.id
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                videos = if (shuffle) emptyList() else _uiState.value.videos,
+                page = if (shuffle) 0 else _uiState.value.page,
+                hasMore = if (shuffle) true else _uiState.value.hasMore
+            )
             repo.feed(token, folderId, limit)
                 .onSuccess { resp ->
+                    // Для папок не скрываем видео по local-флагу shown, чтобы не ломать выдачу.
+                    // Оставляем только опубликованные ролики.
+                    val published = resp.videos.filter { it.video.status == "PUBLISHED" }
+                    var finalVideos = if (shuffle) published.shuffled(Random(System.nanoTime())) else published
+                    if (
+                        shuffle &&
+                        previousFirstId != null &&
+                        finalVideos.firstOrNull()?.id == previousFirstId &&
+                        finalVideos.size > 1
+                    ) {
+                        var attempts = 0
+                        while (
+                            finalVideos.firstOrNull()?.id == previousFirstId &&
+                            finalVideos.size > 1 &&
+                            attempts < 5
+                        ) {
+                            finalVideos = published.shuffled(Random(System.nanoTime()))
+                            attempts++
+                        }
+                    }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        videos = resp.videos,
+                        videos = finalVideos,
                         page = resp.page,
                         hasMore = resp.hasMore,
                         folderName = resp.folderName

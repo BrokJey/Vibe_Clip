@@ -69,6 +69,19 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") id: String
     ): Response<Unit>
+
+    @POST("videos/{id}/report")
+    suspend fun reportVideo(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Query("reason") reason: String
+    ): Response<Unit>
+
+    @DELETE("videos/{id}/report")
+    suspend fun withdrawReport(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<Unit>
     
     // Reaction endpoints
     @POST("reactions")
@@ -214,6 +227,29 @@ interface ApiService {
     suspend fun rejectSubscription(
         @Header("Authorization") token: String,
         @Path("subscriberId") subscriberId: String
+    ): Response<Unit>
+
+    @GET("admin/moderation/videos/reported")
+    suspend fun getReportedVideos(
+        @Header("Authorization") token: String
+    ): Response<List<VideoResponse>>
+
+    @POST("admin/moderation/videos/{id}/reject-reports")
+    suspend fun rejectVideoReports(
+        @Header("Authorization") token: String,
+        @Path("id") videoId: String
+    ): Response<Unit>
+
+    @POST("admin/moderation/videos/{id}/resolve-reports")
+    suspend fun resolveVideoReports(
+        @Header("Authorization") token: String,
+        @Path("id") videoId: String
+    ): Response<Unit>
+
+    @DELETE("admin/videos/{id}")
+    suspend fun adminDeleteVideo(
+        @Header("Authorization") token: String,
+        @Path("id") videoId: String
     ): Response<Unit>
 }
 

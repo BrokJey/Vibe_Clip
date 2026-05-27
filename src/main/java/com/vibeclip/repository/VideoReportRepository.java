@@ -23,4 +23,8 @@ public interface VideoReportRepository extends JpaRepository<VideoReport, UUID> 
     boolean existsByVideoIdAndReporter(UUID videoId, User reporter);
 
     List<VideoReport> findByVideoAndStatus(Video video, ReportStatus status);
+
+    void deleteByVideoAndReporter_Id(Video video, UUID reporterId);
+
+    void deleteByVideo(Video video);
 }

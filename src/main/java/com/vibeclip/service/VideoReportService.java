@@ -40,6 +40,18 @@ public class VideoReportService {
     }
 
     @Transactional
+    public void withdrawReport(User reporter, UUID videoId) {
+        Video video = videoRepository.findById(videoId)
+                .orElseThrow(() -> new RuntimeException("Видео не найдено"));
+
+        if (!videoReportRepository.existsByVideoIdAndReporter(videoId, reporter)) {
+            throw new IllegalStateException("Вы не жаловались на это видео");
+        }
+
+        videoReportRepository.deleteByVideoAndReporter_Id(video, reporter.getId());
+    }
+
+    @Transactional
     public void resolveAllReportsForVideo(UUID videoId) {
 
         Video video = videoRepository.findById(videoId)

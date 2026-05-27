@@ -93,7 +93,7 @@ fun UserProfileScreen(
                         username = profile.username,
                         avatarUrl = profile.avatarUrl,
                         subtitle = when {
-                            profile.privateProfile && uiState.videos.isEmpty() && !uiState.isOwnProfile ->
+                            profile.privateProfile && !uiState.isOwnProfile ->
                                 "Приватный профиль"
                             else -> "${profile.subscribersCount} подписчиков"
                         },
@@ -120,7 +120,12 @@ fun UserProfileScreen(
                         ProfileVideoGrid(
                             videos = uiState.videos,
                             isLoading = false,
-                            emptyMessage = if (profile.privateProfile && !uiState.isSubscribed && !uiState.isOwnProfile) {
+                            emptyMessage = if (
+                                profile.privateProfile &&
+                                !uiState.isSubscribed &&
+                                !uiState.isOwnProfile &&
+                                !uiState.isAdmin
+                            ) {
                                 "Видео доступны только подписчикам"
                             } else {
                                 "У пользователя пока нет видео"

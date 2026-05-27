@@ -25,8 +25,9 @@ object ErrorMessages {
 
     const val VIDEO_UNAVAILABLE = "Видео не доступно"
     const val TIMEOUT = "Время ожидания загрузки превышено. Возможно у вас не подключен интернет или сервер временно не доступен. Попробуйте позже"
-    const val NETWORK = "Нет подключения к интернету. Проверьте сеть и попробуйте снова"
+    const val NETWORK = "Сервер временно не работает. Попробуйте зайти позже."
     const val SERVER_UNAVAILABLE = "Сервер временно недоступен. Попробуйте позже"
+    const val SESSION_EXPIRED = "Упс, ваша сессия истекла. Перезайдите в аккаунт для продолжения работы приложения."
     const val WRONG_CREDENTIALS = "Не верно введены учётные данные"
     const val ACCOUNT_NOT_FOUND = "Аккаунта с такими данными не существует. Зарегистрируйтесь"
     const val GENERIC = "Что-то пошло не так. Попробуйте позже"
@@ -39,6 +40,9 @@ object ErrorMessages {
         if (isNetwork(throwable)) return UserFacingError(NETWORK, showRetry = true)
 
         val raw = throwable.message.orEmpty()
+        if (looksSessionExpired(raw)) {
+            return UserFacingError(SESSION_EXPIRED, showRetry = false)
+        }
         if (context == ErrorContext.AuthLogin) {
             return UserFacingError(mapAuthLoginMessage(raw), showRetry = false)
         }
@@ -233,5 +237,16 @@ object ErrorMessages {
             lower.contains("error code") ||
             lower.contains("playbackexception") ||
             lower.length > 180
+    }
+
+    private fun looksSessionExpired(raw: String): Boolean {
+        val lower = raw.lowercase()
+        // Мы ловим 403 даже если его “не пробросили” в status-код, а отдали как текст сообщения Exception.
+        return lower.contains(" код ошибки 403") ||
+            lower.contains("code: 403") ||
+            lower.contains("code 403") ||
+            lower.contains("\"status\":403") ||
+            lower.contains("\"statusCode\":403") ||
+            (lower.contains("403") && (lower.contains("forbidden") || lower.contains("access denied") || lower.contains("недостат")));
     }
 }

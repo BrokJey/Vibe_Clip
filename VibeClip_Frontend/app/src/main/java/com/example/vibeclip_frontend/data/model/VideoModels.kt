@@ -23,6 +23,7 @@ data class VideoResponse(
     val authorUsername: String?,
     val hashtags: Set<String>,
     val metrics: VideoMetricsResponse?,
+    val reportedByMe: Boolean? = null,
     val createdAt: String,
     val updatedAt: String
 )
@@ -31,7 +32,8 @@ data class VideoMetricsResponse(
     val viewCount: Long,
     val likeCount: Long,
     val commentCount: Long,
-    val shareCount: Long
+    val shareCount: Long,
+    val reportCount: Long = 0
 )
 
 data class VideoListResponse(

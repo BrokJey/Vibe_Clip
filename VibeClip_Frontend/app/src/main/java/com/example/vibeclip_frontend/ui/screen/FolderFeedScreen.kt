@@ -14,14 +14,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.vibeclip_frontend.data.repository.FolderRepository
+import com.example.vibeclip_frontend.di.AppModule
 import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.viewmodel.FolderFeedViewModel
+import com.example.vibeclip_frontend.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -36,6 +42,27 @@ fun FolderFeedScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pagerState = rememberPagerState(pageCount = { maxOf(uiState.videos.size, 1) })
+    var viewerUsername by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(token) {
+        AppModule.userRepository.me(token).onSuccess { me ->
+            viewerUsername = me.username
+        }
+    }
+
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    var didEnterFolderFeed by remember { mutableStateOf(false) }
+    LaunchedEffect(currentBackStackEntry) {
+        val route = currentBackStackEntry?.destination?.route
+        val currentFolderId = currentBackStackEntry?.arguments?.getString("folderId")
+        if (route == Screen.FolderFeed.routePattern && currentFolderId == folderId) {
+            if (didEnterFolderFeed) {
+                viewModel.reload()
+            } else {
+                didEnterFolderFeed = true
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -95,7 +122,8 @@ fun FolderFeedScreen(
                         video = folderVideo.video,
                         isActive = isActive,
                         token = token,
-                        navController = navController
+                        navController = navController,
+                        viewerUsername = viewerUsername
                     )
                 }
 

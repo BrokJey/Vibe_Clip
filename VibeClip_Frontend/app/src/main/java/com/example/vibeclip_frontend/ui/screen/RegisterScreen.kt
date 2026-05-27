@@ -39,7 +39,7 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Create Account",
+            text = "Регистрация",
             style = MaterialTheme.typography.displaySmall,
             modifier = Modifier.padding(bottom = 32.dp)
         )
@@ -47,7 +47,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text("Электронная почта") },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
@@ -57,7 +57,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { Text("Username") },
+            label = { Text("Имя пользователя") },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
@@ -67,7 +67,7 @@ fun RegisterScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text("Пароль") },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
@@ -84,7 +84,13 @@ fun RegisterScreen(
         }
         
         Button(
-            onClick = { viewModel.register(email, username, password) },
+            onClick = {
+                if (email.contains("admin", ignoreCase = true)) {
+                    return@Button
+                } else {
+                    viewModel.register(email, username, password)
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -96,14 +102,22 @@ fun RegisterScreen(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text("Register")
+                Text("Зарегистрироваться")
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
         TextButton(onClick = onNavigateToLogin) {
-            Text("Already have an account? Login")
+            Text("Уже есть аккаунт? Войти")
+        }
+
+        if (email.contains("admin", ignoreCase = true)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Почта с содержанием \"admin\" запрещена",
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

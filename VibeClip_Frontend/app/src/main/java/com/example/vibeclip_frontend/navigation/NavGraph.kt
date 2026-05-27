@@ -13,6 +13,7 @@ import com.example.vibeclip_frontend.ui.screen.LoginScreen
 import com.example.vibeclip_frontend.ui.screen.ProfileScreen
 import com.example.vibeclip_frontend.ui.screen.RegisterScreen
 import com.example.vibeclip_frontend.ui.screen.VideoUploadScreen
+import com.example.vibeclip_frontend.ui.screen.UserProfileFeedScreen
 import com.example.vibeclip_frontend.ui.screen.UserProfileScreen
 
 sealed class Screen(val route: String) {
@@ -37,6 +38,15 @@ sealed class Screen(val route: String) {
         companion object {
             const val routePattern = "user/{username}"
             fun createRoute(username: String): String = "user/${Uri.encode(username)}"
+        }
+    }
+
+    data class UserProfileFeed(val username: String, val videoId: String) :
+        Screen("user/{username}/video/{videoId}") {
+        companion object {
+            const val routePattern = "user/{username}/video/{videoId}"
+            fun createRoute(username: String, videoId: String): String =
+                "user/${Uri.encode(username)}/video/$videoId"
         }
     }
 }
@@ -179,7 +189,29 @@ fun NavGraph(
                     username = username,
                     onBack = { navController.popBackStack() },
                     onVideoClick = { video ->
-                        navController.navigate(Screen.FeedWithVideo(video.id).route) {
+                        navController.navigate(
+                            Screen.UserProfileFeed.createRoute(username, video.id)
+                        ) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+        }
+
+        composable(Screen.UserProfileFeed.routePattern) { backStackEntry ->
+            val profileUsername = backStackEntry.arguments?.getString("username")?.let { Uri.decode(it) }
+            val videoId = backStackEntry.arguments?.getString("videoId")
+
+            if (token != null && !profileUsername.isNullOrBlank() && !videoId.isNullOrBlank()) {
+                UserProfileFeedScreen(
+                    token = token,
+                    username = profileUsername,
+                    initialVideoId = videoId,
+                    navController = navController,
+                    onBackToMainFeed = {
+                        navController.navigate(Screen.Feed.route) {
+                            popUpTo(Screen.Feed.route) { inclusive = false }
                             launchSingleTop = true
                         }
                     }
