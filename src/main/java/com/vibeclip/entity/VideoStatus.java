@@ -7,5 +7,3 @@ public enum VideoStatus {
     REJECTED,       // Отклонено модератором
     DELETED         // Удалено
 }
-
-

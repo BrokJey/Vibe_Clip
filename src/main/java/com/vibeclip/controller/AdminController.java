@@ -125,15 +125,18 @@ public class AdminController extends BaseController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/moderation/reports/{id}/resolve")
-    public ResponseEntity<Void> resolveReport(@PathVariable UUID id) {
+    @PostMapping("/moderation/videos/{id}/resolve-reports")
+    public ResponseEntity<Void> resolveReports(@PathVariable UUID id) {
 
-        VideoReport report = videoReportRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Report not found"));
+        videoReportService.resolveAllReportsForVideo(id);
 
-        report.setStatus(ReportStatus.REVIEWED);
+        return ResponseEntity.ok().build();
+    }
 
-        videoReportRepository.save(report);
+    @PostMapping("/moderation/videos/{id}/reject-reports")
+    public ResponseEntity<Void> rejectReports(@PathVariable UUID id) {
+
+        videoReportService.rejectAllReportsForVideo(id);
 
         return ResponseEntity.ok().build();
     }

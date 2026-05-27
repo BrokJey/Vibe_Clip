@@ -6,9 +6,11 @@ import com.vibeclip.entity.Video;
 import com.vibeclip.entity.VideoReport;
 import com.vibeclip.repository.VideoReportRepository;
 import com.vibeclip.repository.VideoRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -35,5 +37,43 @@ public class VideoReportService {
                 .build();
 
         videoReportRepository.save(report);
+    }
+
+    @Transactional
+    public void resolveAllReportsForVideo(UUID videoId) {
+
+        Video video = videoRepository.findById(videoId)
+                .orElseThrow(() -> new RuntimeException("Видео не найдено"));
+
+        List<VideoReport> reports =
+                videoReportRepository.findByVideoAndStatus(
+                        video,
+                        ReportStatus.PENDING
+                );
+
+        reports.forEach(report ->
+                report.setStatus(ReportStatus.REVIEWED)
+        );
+
+        videoReportRepository.saveAll(reports);
+    }
+
+    @Transactional
+    public void rejectAllReportsForVideo(UUID videoId) {
+
+        Video video = videoRepository.findById(videoId)
+                .orElseThrow(() -> new RuntimeException("Видео не найдено"));
+
+        List<VideoReport> reports =
+                videoReportRepository.findByVideoAndStatus(
+                        video,
+                        ReportStatus.PENDING
+                );
+
+        reports.forEach(report ->
+                report.setStatus(ReportStatus.REJECTED)
+        );
+
+        videoReportRepository.saveAll(reports);
     }
 }
