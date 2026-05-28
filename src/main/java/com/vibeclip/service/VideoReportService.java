@@ -76,4 +76,8 @@ public class VideoReportService {
 
         videoReportRepository.saveAll(reports);
     }
+
+    public long countPendingReports(UUID videoId) {
+        return videoReportRepository.countByVideoIdAndStatus(videoId, ReportStatus.PENDING);
+    }
 }

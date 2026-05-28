@@ -36,6 +36,8 @@ public class VideoResponse {
 
     // Метрики (опционально, можно загружать отдельно)
     private VideoMetricsResponse metrics;
+
+    private long reportsCount;
 }
 
 

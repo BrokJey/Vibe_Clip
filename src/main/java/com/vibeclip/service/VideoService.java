@@ -40,6 +40,7 @@ public class VideoService {
     private final FolderVideoRepository folderVideoRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionService subscriptionService;
+    private final VideoReportRepository videoReportRepository;
 
 
     @Transactional
@@ -193,6 +194,8 @@ public class VideoService {
         } catch (Exception e) {
             log.error("Ошибка при удалении файлов видео {}: {}", video.getId(), e.getMessage());
         }
+
+        videoReportRepository.deleteAllByVideo(video);
 
         // 6. Удаляем само видео из БД
         videoRepository.delete(video);

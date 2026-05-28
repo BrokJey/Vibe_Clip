@@ -60,7 +60,14 @@ public class AdminController extends BaseController {
         VideoStatus moderationStatus = status != null ? status : VideoStatus.PENDING;
         
         Page<Video> videos = videoRepository.findByStatus(moderationStatus, pageable);
-        Page<VideoResponse> response = videos.map(videoMapper::toDTO);
+        Page<VideoResponse> response = videos.map(video -> {
+            VideoResponse dto = videoMapper.toDTO(video);
+
+            long reports = videoReportService.countPendingReports(video);
+            dto.setReportsCount(reports);
+
+            return dto;
+        });
         
         return ResponseEntity.ok(response);
     }
@@ -139,6 +146,14 @@ public class AdminController extends BaseController {
         videoReportService.rejectAllReportsForVideo(id);
 
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/moderation/videos/{id}/reports/count")
+    public ResponseEntity<Long> getReportsCount(@PathVariable UUID id) {
+
+        long count = videoReportService.countPendingReports(id);
+
+        return ResponseEntity.ok(count);
     }
 }
 
