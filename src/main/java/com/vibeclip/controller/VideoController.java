@@ -266,16 +266,5 @@ public class VideoController extends BaseController {
 
         return ResponseEntity.ok().build();
     }
-
-    @DeleteMapping("/{id}/report")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
-    public ResponseEntity<Void> withdrawReport(
-            @PathVariable UUID id,
-            Authentication authentication
-    ) {
-        User user = getCurrentUser(authentication);
-        videoReportService.withdrawReport(user, id);
-        return ResponseEntity.noContent().build();
-    }
 }
 
