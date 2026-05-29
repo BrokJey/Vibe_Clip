@@ -48,6 +48,8 @@ public class VideoServiceTest {
     private ReactionRepository reactionRepository;
     @Mock
     private FolderVideoRepository folderVideoRepository;
+    @Mock
+    private VideoReportRepository videoReportRepository;
 
     @Spy
     @InjectMocks
@@ -375,6 +377,7 @@ public class VideoServiceTest {
         Video video = new Video();
 
         when(videoRepository.findByIdAndAuthorId(id, author.getId())).thenReturn(Optional.of(video));
+        doNothing().when(videoReportRepository).deleteAllByVideo(any(Video.class));
 
         videoService.delete(id, author);
 
@@ -403,8 +406,10 @@ public class VideoServiceTest {
         Video video = new Video();
 
         when(videoRepository.findById(id)).thenReturn(Optional.of(video));
+        doNothing().when(videoReportRepository).deleteAllByVideo(any(Video.class));
 
         videoService.deleteByAdmin(id);
+
 
         verify(videoRepository).findById(id);
         verify(videoRepository).delete(video);
@@ -414,8 +419,7 @@ public class VideoServiceTest {
     void deleteByAdmin_notFound_throwsException() {
         UUID id = UUID.randomUUID();
 
-        when(videoRepository.findById(id))
-                .thenReturn(Optional.empty());
+        when(videoRepository.findById(id)).thenReturn(Optional.empty());
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
@@ -446,6 +450,7 @@ public class VideoServiceTest {
         doNothing().when(reactionRepository).deleteByVideo(video);
         doNothing().when(folderVideoRepository).deleteByVideo(video);
         doNothing().when(fileStorageService).deleteFile(anyString());
+        doNothing().when(videoReportRepository).deleteAllByVideo(any(Video.class));
 
         videoService.deleteByAdmin(id);
 
@@ -472,6 +477,7 @@ public class VideoServiceTest {
 
         doNothing().when(reactionRepository).deleteByVideo(video);
         doNothing().when(folderVideoRepository).deleteByVideo(video);
+        doNothing().when(videoReportRepository).deleteAllByVideo(any(Video.class));
 
         videoService.deleteByAdmin(id);
 
@@ -489,6 +495,7 @@ public class VideoServiceTest {
         video.setThumbnailUrl(null);
 
         when(videoRepository.findById(id)).thenReturn(Optional.of(video));
+        doNothing().when(videoReportRepository).deleteAllByVideo(any(Video.class));
 
         videoService.deleteByAdmin(id);
 

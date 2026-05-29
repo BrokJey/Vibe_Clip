@@ -63,12 +63,11 @@ public class AdminController extends BaseController {
         Page<VideoResponse> response = videos.map(video -> {
             VideoResponse dto = videoMapper.toDTO(video);
 
-            long reports = videoReportService.countPendingReports(video);
+            long reports = videoReportService.countPendingReports(video.getId());
             dto.setReportsCount(reports);
 
             return dto;
         });
-        
         return ResponseEntity.ok(response);
     }
 
