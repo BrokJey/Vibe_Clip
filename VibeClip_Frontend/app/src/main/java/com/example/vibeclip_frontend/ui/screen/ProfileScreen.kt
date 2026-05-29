@@ -312,7 +312,7 @@ fun ProfileScreen(
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
             title = { Text("Удалить видео?") },
-            text = { Text("Вы уверены, что хотите удалить видео ${video.title.trim('"', '\'')}?") },
+            text = { Text("Вы уверены, что хотите удалить видео ${video.title.orEmpty().trim('"', '\'')}?") },
             confirmButton = {
                 TextButton(onClick = { viewModel.deleteVideo(video.id) { showDeleteDialog = null } }) {
                     Text("Удалить", color = MaterialTheme.colorScheme.error)
@@ -407,9 +407,9 @@ fun EditVideoDialog(
     onDismiss: () -> Unit,
     onSave: (String, String, String) -> Unit
 ) {
-    var title by remember { mutableStateOf(video.title) }
+    var title by remember { mutableStateOf(video.title.orEmpty()) }
     var description by remember { mutableStateOf(video.description ?: "") }
-    var hashtags by remember { mutableStateOf(video.hashtags.joinToString(", ")) }
+    var hashtags by remember { mutableStateOf(video.hashtags.orEmpty().joinToString(", ")) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(

@@ -21,6 +21,14 @@ interface ApiService {
         @Query("recommended") recommended: Boolean? = null,
         @Query("randomPercentage") randomPercentage: Double? = null
     ): Response<VideoListResponse>
+
+    /** Смешанная лента (подписки + рекомендации). Пагинация на бэкенде ограничена — для догрузки используем getVideos без recommended. */
+    @GET("videos/feed")
+    suspend fun getFeed(
+        @Header("Authorization") token: String,
+        @Query("page") page: Int,
+        @Query("size") size: Int
+    ): Response<VideoListResponse>
     
     @GET("videos/{id}")
     suspend fun getVideo(

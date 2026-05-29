@@ -81,7 +81,7 @@ class UserProfileViewModel(
                         isPending = isPending,
                         videos = profile.videos
                     )
-                    if (isSubscribed || isPending) {
+                    if ((isSubscribed || isPending) && !(isOwnProfile || isOwnProfileById)) {
                         subscriptionsStore.add(
                             StoredSubscription(
                                 userId = profile.id,

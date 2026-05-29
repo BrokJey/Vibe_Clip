@@ -31,6 +31,23 @@ class VideoRepository {
             Result.failure(e)
         }
     }
+
+    /** Полный каталог PUBLISHED с нормальной пагинацией (GET /videos без recommended). */
+    suspend fun getPublishedFeed(
+        token: String,
+        page: Int = 0,
+        size: Int = 20
+    ): Result<VideoListResponse> = getVideos(token, page, size, recommended = null, randomPercentage = null)
+
+    suspend fun getMixedFeed(
+        token: String,
+        page: Int = 0,
+        size: Int = 20
+    ): Result<VideoListResponse> = runCatching {
+        val response = apiService.getFeed("Bearer $token", page, size)
+        if (response.isSuccessful && response.body() != null) response.body()!!
+        else throw Exception("Failed to fetch feed: ${response.message()} (Code: ${response.code()})")
+    }
     
     suspend fun getVideo(token: String, id: String): Result<VideoResponse> {
         return try {

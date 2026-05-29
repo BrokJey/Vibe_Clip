@@ -13,6 +13,7 @@ import com.example.vibeclip_frontend.ui.screen.LoginScreen
 import com.example.vibeclip_frontend.ui.screen.ProfileScreen
 import com.example.vibeclip_frontend.ui.screen.RegisterScreen
 import com.example.vibeclip_frontend.ui.screen.VideoUploadScreen
+import com.example.vibeclip_frontend.ui.screen.SingleVideoScreen
 import com.example.vibeclip_frontend.ui.screen.UserProfileFeedScreen
 import com.example.vibeclip_frontend.ui.screen.UserProfileScreen
 
@@ -47,6 +48,13 @@ sealed class Screen(val route: String) {
             const val routePattern = "user/{username}/video/{videoId}"
             fun createRoute(username: String, videoId: String): String =
                 "user/${Uri.encode(username)}/video/$videoId"
+        }
+    }
+
+    data class OwnVideo(val videoId: String) : Screen("my_video/{videoId}") {
+        companion object {
+            const val routePattern = "my_video/{videoId}"
+            fun createRoute(videoId: String): String = "my_video/$videoId"
         }
     }
 }
@@ -169,13 +177,25 @@ fun NavGraph(
                     token = token,
                     onLogout = onLogout,
                     onVideoClick = { video ->
-                        navController.navigate(Screen.FeedWithVideo(video.id).route) {
+                        navController.navigate(Screen.OwnVideo.createRoute(video.id)) {
                             launchSingleTop = true
                         }
                     },
                     onNavigateToUser = { username ->
                         navController.navigateToUserProfile(username)
                     }
+                )
+            }
+        }
+
+        composable(Screen.OwnVideo.routePattern) { backStackEntry ->
+            val videoId = backStackEntry.arguments?.getString("videoId")
+            if (token != null && !videoId.isNullOrBlank()) {
+                SingleVideoScreen(
+                    token = token,
+                    videoId = videoId,
+                    navController = navController,
+                    onBack = { navController.popBackStack() }
                 )
             }
         }

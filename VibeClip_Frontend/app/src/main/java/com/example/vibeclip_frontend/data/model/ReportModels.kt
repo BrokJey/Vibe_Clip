@@ -29,5 +29,6 @@ data class ModerationVideoItem(
     val authorId: String?,
     val authorUsername: String,
     val reportCount: Long,
-    val reporters: List<ReportedUserResponse> = emptyList()
+    /** Имена пользователей, пожаловавшихся (локальный трекер на устройстве). */
+    val reporterUsernames: List<String> = emptyList()
 )

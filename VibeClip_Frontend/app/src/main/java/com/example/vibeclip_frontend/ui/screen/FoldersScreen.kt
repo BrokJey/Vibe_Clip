@@ -55,7 +55,7 @@ fun FoldersScreen(
                 val tags = mutableSetOf<String>()
                 val mapping = mutableMapOf<String, String>()
                 listResponse.content.forEach { video ->
-                    video.hashtags.forEach { rawTag ->
+                    video.hashtags.orEmpty().forEach { rawTag ->
                         val cleaned = rawTag.trim().trim('"')
                         if (cleaned.isNotBlank()) {
                             // Нормализуем для отображения (убираем #)

@@ -47,7 +47,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.vibeclip_frontend.data.model.ModerationVideoItem
-import com.example.vibeclip_frontend.data.model.ReportedUserResponse
 import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.util.MediaUrlResolver
 
@@ -69,7 +68,7 @@ fun AdminReportsSheet(
     if (!visible) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var reportersDialog by remember { mutableStateOf<Pair<String, List<ReportedUserResponse>>?>(null) }
+    var reportersDialog by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -130,7 +129,7 @@ fun AdminReportsSheet(
                                 onReject = { onRejectReports(item.id) },
                                 onBlock = { onBlockVideo(item.id) },
                                 onShowReporters = {
-                                    reportersDialog = item.title to item.reporters
+                                    reportersDialog = item.title to item.reporterUsernames
                                 },
                                 onOpenAuthor = { onOpenUser(item.authorUsername) }
                             )
@@ -141,10 +140,10 @@ fun AdminReportsSheet(
         }
     }
 
-    reportersDialog?.let { (videoTitle, users) ->
+    reportersDialog?.let { (videoTitle, usernames) ->
         ReportersDialog(
             title = videoTitle,
-            users = users,
+            usernames = usernames,
             onDismiss = { reportersDialog = null },
             onOpenUser = onOpenUser
         )
@@ -252,7 +251,7 @@ private fun ReportVideoRow(
 @Composable
 private fun ReportersDialog(
     title: String,
-    users: List<ReportedUserResponse>,
+    usernames: List<String>,
     onDismiss: () -> Unit,
     onOpenUser: (String) -> Unit
 ) {
@@ -281,15 +280,14 @@ private fun ReportersDialog(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            if (users.isEmpty()) {
+            if (usernames.isEmpty()) {
                 Text(
                     "Список жалобщиков пуст. Имена появятся после жалоб из приложения на этом устройстве.",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    items(users.distinctBy { it.id ?: it.username }, key = { it.id ?: it.username.orEmpty() }) { user ->
-                        val username = user.username.orEmpty()
+                    items(usernames.distinct(), key = { it }) { username ->
                         TextButton(
                             onClick = {
                                 if (username.isNotBlank()) onOpenUser(username)

@@ -2,7 +2,6 @@ package com.example.vibeclip_frontend.data.repository
 
 import com.example.vibeclip_frontend.data.RetrofitClient
 import com.example.vibeclip_frontend.data.model.ModerationVideoItem
-import com.example.vibeclip_frontend.data.model.ReportedUserResponse
 import com.example.vibeclip_frontend.util.ReportTrackerStore
 
 class AdminModerationRepository(
@@ -17,19 +16,18 @@ class AdminModerationRepository(
         }
 
         response.body()!!.map { video ->
-            val localReporters = reportTracker.getReporterUsernames(video.id)
-                .map { username -> ReportedUserResponse(username = username) }
+            val reporterUsernames = reportTracker.getReporterUsernames(video.id)
             val localCount = reportTracker.getCount(video.id)
-            val reportCount = maxOf(localCount, localReporters.size.toLong(), 1L)
+            val reportCount = maxOf(localCount, reporterUsernames.size.toLong(), 1L)
 
             ModerationVideoItem(
                 id = video.id,
-                title = video.title.trim('"', '\'').ifBlank { "Без названия" },
+                title = video.title?.trim('"', '\'').orEmpty().ifBlank { "Без названия" },
                 thumbnailUrl = video.thumbnailUrl,
                 authorId = video.authorId,
                 authorUsername = video.authorUsername.orEmpty().ifBlank { "unknown" },
                 reportCount = reportCount,
-                reporters = localReporters
+                reporterUsernames = reporterUsernames
             )
         }
     }
@@ -55,9 +53,7 @@ class AdminModerationRepository(
     }
 
     suspend fun deleteVideo(token: String, videoId: String): Result<Unit> = runCatching {
-        // Сценарий 1: перед удалением помечаем жалобы как REVIEWED (бэкенд не удаляет строки reports при DELETE видео).
         apiService.resolveVideoReports("Bearer $token", videoId)
-
         val response = apiService.adminDeleteVideo("Bearer $token", videoId)
         if (response.isSuccessful) {
             reportTracker.clearVideo(videoId)

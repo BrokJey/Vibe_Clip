@@ -40,6 +40,9 @@ import androidx.media3.ui.PlayerView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import com.example.vibeclip_frontend.data.model.VideoResponse
+import com.example.vibeclip_frontend.data.model.VideoMetricsResponse
+import com.example.vibeclip_frontend.data.model.withCommentCount
+import com.example.vibeclip_frontend.data.model.withLikeCount
 import com.example.vibeclip_frontend.data.repository.VideoRepository
 import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.viewmodel.VideoViewModel
@@ -401,14 +404,8 @@ fun VideoFullScreenCard(
                 val currentLikeCount = metrics?.likeCount ?: 0
                 // Оптимистичное обновление UI
                 userLikeReaction = null
-                metrics = metrics?.copy(likeCount = maxOf(0, currentLikeCount - 1)) ?: 
-                    com.example.vibeclip_frontend.data.model.VideoMetricsResponse(
-                        viewCount = 0,
-                        likeCount = maxOf(0, currentLikeCount - 1),
-                        commentCount = 0,
-                        shareCount = 0,
-                        reportCount = reportCount
-                    )
+                metrics = metrics?.withLikeCount(maxOf(0, currentLikeCount - 1))
+                    ?: VideoMetricsResponse(likeCount = maxOf(0, currentLikeCount - 1))
                 
                 val result = reactionRepository.deleteReaction(token, video.id, "LIKE")
                 result.onSuccess {
@@ -447,14 +444,8 @@ fun VideoFullScreenCard(
                 // Добавляем лайк
                 val currentLikeCount = metrics?.likeCount ?: 0
                 // Оптимистичное обновление UI
-                metrics = metrics?.copy(likeCount = currentLikeCount + 1) ?: 
-                    com.example.vibeclip_frontend.data.model.VideoMetricsResponse(
-                        viewCount = 0,
-                        likeCount = currentLikeCount + 1,
-                        commentCount = 0,
-                        shareCount = 0,
-                        reportCount = reportCount
-                    )
+                metrics = metrics?.withLikeCount(currentLikeCount + 1)
+                    ?: VideoMetricsResponse(likeCount = currentLikeCount + 1)
                 
                 val result = reactionRepository.createReaction(token, video.id, "LIKE")
                 result.onSuccess { reaction ->
@@ -860,12 +851,12 @@ fun VideoFullScreenCard(
                 )
             }
 
-            if (video.hashtags.isNotEmpty()) {
+            if (!video.hashtags.isNullOrEmpty()) {
                 // Нормализация хэштегов:
                 // - убираем кавычки
                 // - убираем лишние # в начале
                 // - гарантируем ровно один # в начале
-                val normalizedHashtags = video.hashtags.mapNotNull { raw ->
+                val normalizedHashtags = video.hashtags.orEmpty().mapNotNull { raw ->
                     val cleaned = raw.trim().trim('"')
                     if (cleaned.isBlank()) return@mapNotNull null
                     val withoutHashes = cleaned.trimStart('#')
@@ -885,13 +876,7 @@ fun VideoFullScreenCard(
 
         // Кнопки реакций справа сбоку, поверх видео
         val displayMetrics = currentMetrics ?: video.metrics
-        val defaultMetrics = displayMetrics ?: com.example.vibeclip_frontend.data.model.VideoMetricsResponse(
-            viewCount = 0,
-            likeCount = 0,
-            commentCount = 0,
-            shareCount = 0,
-            reportCount = 0
-        )
+        val defaultMetrics = displayMetrics ?: VideoMetricsResponse()
         
         // Кнопки всегда отображаются справа по центру
         Column(
@@ -980,7 +965,7 @@ fun VideoFullScreenCard(
                 onDismiss = { showCommentsSheet = false },
                 onCommentAdded = {
                     // Обновляем счетчик комментариев
-                    metrics = metrics?.copy(commentCount = (metrics?.commentCount ?: 0) + 1)
+                    metrics = metrics?.withCommentCount((metrics?.commentCount ?: 0) + 1)
                 }
             )
         }

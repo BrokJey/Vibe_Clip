@@ -3,6 +3,7 @@ package com.example.vibeclip_frontend.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.vibeclip_frontend.data.model.FolderVideoResponse
+import com.example.vibeclip_frontend.data.model.isPublishedForFeed
 import com.example.vibeclip_frontend.data.repository.FolderRepository
 import com.example.vibeclip_frontend.util.ErrorMessages
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +51,7 @@ class FolderFeedViewModel(
                 .onSuccess { resp ->
                     // Для папок не скрываем видео по local-флагу shown, чтобы не ломать выдачу.
                     // Оставляем только опубликованные ролики.
-                    val published = resp.videos.filter { it.video.status == "PUBLISHED" }
+                    val published = resp.videos.filter { it.video.isPublishedForFeed() }
                     var finalVideos = if (shuffle) published.shuffled(Random(System.nanoTime())) else published
                     if (
                         shuffle &&

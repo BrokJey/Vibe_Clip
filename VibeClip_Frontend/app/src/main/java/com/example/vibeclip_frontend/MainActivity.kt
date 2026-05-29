@@ -130,6 +130,7 @@ private fun screenLabel(screen: Screen): String = when (screen) {
     Screen.Profile -> "Профиль"
     is Screen.UserProfile -> "Профиль пользователя"
     is Screen.UserProfileFeed -> "Видео пользователя"
+    is Screen.OwnVideo -> "Моё видео"
     Screen.Login -> "Вход"
     Screen.Register -> "Регистрация"
     is Screen.FolderFeed -> "Папка"

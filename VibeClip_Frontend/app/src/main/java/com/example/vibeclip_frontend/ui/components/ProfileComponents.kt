@@ -231,7 +231,7 @@ fun ProfileVideoGridItem(
         if (thumbnailUrl != null) {
             AsyncImage(
                 model = thumbnailUrl,
-                contentDescription = video.title,
+                contentDescription = video.title.orEmpty(),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
@@ -244,7 +244,7 @@ fun ProfileVideoGridItem(
             ) {
                 Image(
                     painter = painterResource(R.drawable.vc_logo),
-                    contentDescription = video.title,
+                    contentDescription = video.title.orEmpty(),
                     modifier = Modifier.size(48.dp)
                 )
             }
@@ -295,7 +295,7 @@ fun ProfileVideoGridItem(
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
-                text = video.title.trim('"', '\''),
+                text = video.title.orEmpty().trim('"', '\''),
                 color = Color.White,
                 fontSize = 12.sp,
                 maxLines = 1,

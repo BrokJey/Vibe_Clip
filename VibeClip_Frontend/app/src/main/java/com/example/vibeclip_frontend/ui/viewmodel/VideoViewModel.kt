@@ -2,7 +2,9 @@ package com.example.vibeclip_frontend.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.vibeclip_frontend.data.model.VideoListResponse
 import com.example.vibeclip_frontend.data.model.VideoResponse
+import com.example.vibeclip_frontend.data.model.isPublishedForFeed
 import com.example.vibeclip_frontend.data.repository.VideoRepository
 import com.example.vibeclip_frontend.util.ErrorMessages
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,16 +27,16 @@ class VideoViewModel(
     private val videoRepository: VideoRepository,
     private val token: String
 ) : ViewModel() {
-    
+
     private val _uiState = MutableStateFlow(VideoUiState())
     val uiState: StateFlow<VideoUiState> = _uiState
 
     private var requestToken: Int = 0
-    
+
     init {
         loadVideos()
     }
-    
+
     fun loadVideos(page: Int = 0) {
         val myToken = ++requestToken
         viewModelScope.launch {
@@ -47,60 +49,33 @@ class VideoViewModel(
                 hasMore = if (page == 0) true else _uiState.value.hasMore
             )
 
-            // recommended=true включает персональные рекомендации на основе лайков пользователя
-            // randomPercentage=0.25 означает 25% случайных видео для разнообразия
-            val result = videoRepository.getVideos(
-                token = token,
-                page = page,
-                size = 20,
-                recommended = true,
-                randomPercentage = 0.25
-            )
-
-            result.onSuccess { response ->
-                if (myToken != requestToken) return@onSuccess
-
-                val publishedVideos = response.content.filter { it.status == "PUBLISHED" }
-
-                val finalVideos = if (page == 0) {
-                    // Полная замена на первой странице + перемешивание для смены порядка
-                    publishedVideos.shuffled(Random(System.nanoTime()))
-                } else {
-                    val currentVideos = _uiState.value.videos
-                    val existingIds = currentVideos.map { it.id }.toSet()
-                    val additional = publishedVideos.filter { it.id !in existingIds }
-                    currentVideos + additional
+            fetchFeedPage(page, FEED_PAGE_SIZE)
+                .onSuccess { (videos, response, hasMore) ->
+                    if (myToken != requestToken) return@onSuccess
+                    applyFeedPage(page, videos, response, hasMore)
                 }
-
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    videos = finalVideos,
-                    currentPage = response.pageNumber,
-                    hasMore = response.pageNumber < response.totalPages - 1
-                )
-            }.onFailure { error ->
-                if (myToken != requestToken) return@onFailure
-                val err = ErrorMessages.fromThrowable(error)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = err.message,
-                    errorShowRetry = err.showRetry
-                )
-            }
+                .onFailure { error ->
+                    if (myToken != requestToken) return@onFailure
+                    val err = ErrorMessages.fromThrowable(error)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = err.message,
+                        errorShowRetry = err.showRetry
+                    )
+                }
         }
     }
-    
+
     fun loadMore() {
         if (!_uiState.value.isLoading && _uiState.value.hasMore) {
             loadVideos(_uiState.value.currentPage + 1)
         }
     }
-    
+
     fun refresh() {
         reloadFeed()
     }
 
-    /** Полная перезагрузка ленты с сервера (как при новом входе в аккаунт). */
     fun reloadFeed() {
         val myToken = ++requestToken
         viewModelScope.launch {
@@ -115,57 +90,108 @@ class VideoViewModel(
                 hasMore = true
             )
 
-            val result = videoRepository.getVideos(
-                token = token,
-                page = 0,
-                size = 20,
-                recommended = true,
-                randomPercentage = 0.25
-            )
+            fetchFeedPage(0, FEED_PAGE_SIZE)
+                .onSuccess { (videos, response, hasMore) ->
+                    if (myToken != requestToken) return@onSuccess
 
-            result.onSuccess { response ->
-                if (myToken != requestToken) return@onSuccess
+                    var shuffled = videos.shuffled(Random(System.nanoTime()))
+                    var attempts = 0
+                    while (
+                        previousFirstId != null &&
+                        shuffled.firstOrNull()?.id == previousFirstId &&
+                        shuffled.size > 1 &&
+                        attempts < 5
+                    ) {
+                        shuffled = videos.shuffled(Random(System.nanoTime()))
+                        attempts++
+                    }
 
-                val publishedVideos = response.content.filter { it.status == "PUBLISHED" }
-                var shuffled = publishedVideos.shuffled(Random(System.nanoTime()))
-                var attempts = 0
-                while (
-                    previousFirstId != null &&
-                    shuffled.firstOrNull()?.id == previousFirstId &&
-                    shuffled.size > 1 &&
-                    attempts < 5
-                ) {
-                    shuffled = publishedVideos.shuffled(Random(System.nanoTime()))
-                    attempts++
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        videos = shuffled,
+                        currentPage = response.pageNumber,
+                        hasMore = hasMore,
+                        reloadNonce = baseNonce + 1
+                    )
                 }
-
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    videos = shuffled,
-                    currentPage = response.pageNumber,
-                    hasMore = response.pageNumber < response.totalPages - 1,
-                    reloadNonce = baseNonce + 1
-                )
-            }.onFailure { error ->
-                if (myToken != requestToken) return@onFailure
-                val err = ErrorMessages.fromThrowable(error)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = err.message,
-                    errorShowRetry = err.showRetry
-                )
-            }
+                .onFailure { error ->
+                    if (myToken != requestToken) return@onFailure
+                    val err = ErrorMessages.fromThrowable(error)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = err.message,
+                        errorShowRetry = err.showRetry
+                    )
+                }
         }
     }
-    
+
     fun addVideoToStart(video: VideoResponse) {
-        if (video.status != "PUBLISHED") return
+        if (!video.isPublishedForFeed()) return
         val currentVideos = _uiState.value.videos.toMutableList()
-        // Проверяем, нет ли уже этого видео в списке
         if (currentVideos.none { it.id == video.id }) {
             currentVideos.add(0, video)
             _uiState.value = _uiState.value.copy(videos = currentVideos)
         }
     }
-}
 
+    /**
+     * Страница 0: смешанная лента /videos/feed + дополнение из полного каталога PUBLISHED.
+     * Страницы 1+: только GET /videos без recommended (полная пагинация по БД).
+     *
+     * Не используем recommended=true: на бэкенде выборка ограничена ~size*10 роликами
+     * и часть PUBLISHED-видео (в т.ч. после reject-reports) может не попасть в ленту.
+     */
+    private suspend fun fetchFeedPage(
+        page: Int,
+        size: Int
+    ): Result<Triple<List<VideoResponse>, VideoListResponse, Boolean>> = runCatching {
+        if (page == 0) {
+            val mixed = videoRepository.getMixedFeed(token, 0, size).getOrNull()
+            val catalog = videoRepository.getPublishedFeed(token, 0, size).getOrThrow()
+
+            val mixedVideos = mixed?.content.orEmpty().filter { it.isPublishedForFeed() }
+            val mixedIds = mixedVideos.map { it.id }.toSet()
+            val catalogVideos = catalog.content.filter { it.isPublishedForFeed() }
+            val extraFromCatalog = catalogVideos.filter { it.id !in mixedIds }
+            val merged = (mixedVideos + extraFromCatalog).distinctBy { it.id }
+
+            val videos = if (merged.isNotEmpty()) merged else catalogVideos
+            val hasMore = catalog.last == false ||
+                catalog.pageNumber < catalog.totalPages - 1 ||
+                videos.isNotEmpty()
+
+            Triple(videos, catalog, hasMore)
+        } else {
+            val catalog = videoRepository.getPublishedFeed(token, page, size).getOrThrow()
+            val videos = catalog.content.filter { it.isPublishedForFeed() }
+            val hasMore = catalog.last == false || catalog.pageNumber < catalog.totalPages - 1
+            Triple(videos, catalog, hasMore)
+        }
+    }
+
+    private fun applyFeedPage(
+        page: Int,
+        incoming: List<VideoResponse>,
+        response: VideoListResponse,
+        hasMore: Boolean
+    ) {
+        val finalVideos = if (page == 0) {
+            incoming.shuffled(Random(System.nanoTime()))
+        } else {
+            val existingIds = _uiState.value.videos.map { it.id }.toSet()
+            _uiState.value.videos + incoming.filter { it.id !in existingIds }
+        }
+
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            videos = finalVideos,
+            currentPage = response.pageNumber,
+            hasMore = hasMore
+        )
+    }
+
+    companion object {
+        private const val FEED_PAGE_SIZE = 20
+    }
+}

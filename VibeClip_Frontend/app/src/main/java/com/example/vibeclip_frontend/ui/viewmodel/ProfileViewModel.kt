@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.vibeclip_frontend.data.model.StoredSubscription
 import com.example.vibeclip_frontend.data.model.SubscriberListItem
+import com.example.vibeclip_frontend.data.model.SubscriptionRequestResponse
 import com.example.vibeclip_frontend.data.model.UserResponse
 import com.example.vibeclip_frontend.data.model.VideoRequest
 import com.example.vibeclip_frontend.data.model.VideoResponse
@@ -60,7 +61,9 @@ class ProfileViewModel(
 
     fun loadSubscriptions() {
         viewModelScope.launch {
+            val currentUser = _uiState.value.user ?: userRepo.me(token).getOrNull()
             val outgoing = subscriptionRepo.getOutgoingRequests(token).getOrNull().orEmpty()
+                .filterNot { it.isSelf(currentUser) }
             val pendingIds = outgoing.map { it.subscriberId }.toSet()
 
             val pendingList = mutableListOf<StoredSubscription>()
@@ -75,6 +78,7 @@ class ProfileViewModel(
                     avatarUrl = profile?.avatarUrl,
                     isPending = isPrivate
                 )
+                if (item.isSelf(currentUser)) return@forEach
                 if (isPrivate) {
                     subscriptionsStore.add(item)
                     pendingList.add(item)
@@ -87,7 +91,8 @@ class ProfileViewModel(
 
             subscriptionsStore.getAll()
                 .filter { stored ->
-                    pendingList.none { it.userId == stored.userId } &&
+                    !stored.isSelf(currentUser) &&
+                        pendingList.none { it.userId == stored.userId } &&
                         acceptedList.none { it.userId == stored.userId }
                 }
                 .forEach { stored ->
@@ -118,8 +123,10 @@ class ProfileViewModel(
                     }
                 }
 
+            currentUser?.id?.let { subscriptionsStore.remove(it) }
+
             _uiState.value = _uiState.value.copy(
-                mySubscriptions = pendingList + acceptedList
+                mySubscriptions = (pendingList + acceptedList).filterNot { it.isSelf(currentUser) }
             )
         }
     }
@@ -128,10 +135,13 @@ class ProfileViewModel(
 
     fun loadSubscribers() {
         viewModelScope.launch {
+            val currentUser = _uiState.value.user ?: userRepo.me(token).getOrNull()
             val incoming = subscriptionRepo.getIncomingRequests(token).getOrNull().orEmpty()
+                .filterNot { it.isSelf(currentUser) }
             val pendingIds = incoming.map { it.subscriberId }.toSet()
 
-            val pending = incoming.map { request ->
+            val pending = incoming.mapNotNull { request ->
+                if (request.isSelf(currentUser)) return@mapNotNull null
                 val profile = userRepo.getProfile(token, request.username).getOrNull()
                 SubscriberListItem(
                     userId = request.subscriberId,
@@ -143,13 +153,15 @@ class ProfileViewModel(
 
             // Только принятые подписчики; заявки (pending/rejected) не считаем
             val accepted = subscribersStore.getAll()
-                .filter { it.userId !in pendingIds }
+                .filter { it.userId !in pendingIds && !it.isSelf(currentUser) }
                 .map { stored ->
                     val profile = userRepo.getProfile(token, stored.username).getOrNull()
                     val updated = stored.copy(avatarUrl = profile?.avatarUrl ?: stored.avatarUrl)
                     subscribersStore.add(updated)
                     updated
                 }
+
+            currentUser?.id?.let { subscribersStore.remove(it) }
 
             _uiState.value = _uiState.value.copy(
                 mySubscribers = accepted,
@@ -161,11 +173,14 @@ class ProfileViewModel(
 
     fun acceptSubscriber(subscriberId: String) {
         viewModelScope.launch {
+            val currentUser = _uiState.value.user ?: userRepo.me(token).getOrNull()
+            if (currentUser != null && subscriberId == currentUser.id) return@launch
+
             subscriptionRepo.acceptRequest(token, subscriberId)
                 .onSuccess {
                     val pending = _uiState.value.pendingSubscriberRequests
                         .find { it.userId == subscriberId }
-                    if (pending != null) {
+                    if (pending != null && !pending.isSelf(currentUser)) {
                         subscribersStore.add(
                             StoredSubscription(
                                 userId = pending.userId,
@@ -373,5 +388,21 @@ class ProfileViewModel(
         loadVideos(0)
         refreshSubscriptions()
         loadSubscribers()
+    }
+
+    private fun StoredSubscription.isSelf(currentUser: UserResponse?): Boolean =
+        isSelfUser(userId, username, currentUser)
+
+    private fun SubscriberListItem.isSelf(currentUser: UserResponse?): Boolean =
+        isSelfUser(userId, username, currentUser)
+
+    private fun SubscriptionRequestResponse.isSelf(
+        currentUser: UserResponse?
+    ): Boolean = isSelfUser(subscriberId, username, currentUser)
+
+    private fun isSelfUser(userId: String, username: String, currentUser: UserResponse?): Boolean {
+        if (currentUser == null) return false
+        return userId == currentUser.id ||
+            username.equals(currentUser.username, ignoreCase = true)
     }
 }
