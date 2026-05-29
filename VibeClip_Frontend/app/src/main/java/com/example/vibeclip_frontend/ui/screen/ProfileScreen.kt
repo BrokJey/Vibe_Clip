@@ -12,11 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -46,6 +50,7 @@ import com.example.vibeclip_frontend.di.AppModule
 import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.components.ProfileHeader
 import com.example.vibeclip_frontend.ui.components.ProfileVideoGrid
+import com.example.vibeclip_frontend.ui.viewmodel.AdminModerationViewModel
 import com.example.vibeclip_frontend.ui.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,12 +72,22 @@ fun ProfileScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isAdmin = uiState.user?.email.equals("admin@vibeclip.com", ignoreCase = true)
+    val moderationViewModel: AdminModerationViewModel? = if (isAdmin) {
+        viewModel(key = "admin_moderation_vm") {
+            AdminModerationViewModel(AppModule.adminModerationRepository, token)
+        }
+    } else null
+    val moderationUiState = moderationViewModel?.uiState?.collectAsState()?.value
     val user = uiState.user
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.loadSubscriptions()
         viewModel.loadSubscribers()
+    }
+    LaunchedEffect(isAdmin) {
+        if (isAdmin) moderationViewModel?.load()
     }
 
     var showDeleteDialog by remember { mutableStateOf<VideoResponse?>(null) }
@@ -81,6 +96,7 @@ fun ProfileScreen(
     var showSubscribersDialog by remember { mutableStateOf(false) }
     var showAvatarEdit by remember { mutableStateOf(false) }
     var showPrivacyConfirm by remember { mutableStateOf(false) }
+    var showModerationSheet by remember { mutableStateOf(false) }
 
     if (showSubscriptionsDialog) {
         UsersListDialog(
@@ -150,6 +166,25 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
+                    if (isAdmin && moderationUiState != null && moderationViewModel != null) {
+                        IconButton(onClick = {
+                            showModerationSheet = true
+                            moderationViewModel.load()
+                        }) {
+                            BadgedBox(
+                                badge = {
+                                    if (moderationUiState.notificationsCount > 0) {
+                                        Badge { Text(moderationUiState.notificationsCount.toString()) }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Жалобы на видео"
+                                )
+                            }
+                        }
+                    }
                     TextButton(onClick = onLogout) { Text("Выход") }
                 }
             )
@@ -238,6 +273,22 @@ fun ProfileScreen(
         }
     }
 
+        if (isAdmin && moderationUiState != null && moderationViewModel != null) {
+            AdminReportsSheet(
+                visible = showModerationSheet,
+                isLoading = moderationUiState.isLoading,
+                isActionLoading = moderationUiState.isActionLoading,
+                items = moderationUiState.items,
+                errorMessage = moderationUiState.errorMessage,
+                onDismiss = { showModerationSheet = false },
+                onRejectReports = { moderationViewModel.rejectReports(it) },
+                onBlockVideo = { moderationViewModel.blockVideo(it) },
+                onClearAllReports = { moderationViewModel.clearAllReports() },
+                onOpenUser = onNavigateToUser,
+                onRetry = { moderationViewModel.load() }
+            )
+        }
+
         AvatarEditSheet(
             visible = showAvatarEdit,
             initialAvatarUrl = user?.avatarUrl,
@@ -246,6 +297,11 @@ fun ProfileScreen(
             onDismiss = { showAvatarEdit = false },
             onSave = { pickedUri ->
                 viewModel.saveAvatar(context, pickedUri) {
+                    showAvatarEdit = false
+                }
+            },
+            onDeleteAvatar = {
+                viewModel.deleteAvatar {
                     showAvatarEdit = false
                 }
             }

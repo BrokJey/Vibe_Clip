@@ -247,6 +247,30 @@ class ProfileViewModel(
         }
     }
 
+    fun deleteAvatar(onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSavingProfile = true,
+                profileSaveError = null
+            )
+
+            userRepo.deleteAvatar(token)
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isSavingProfile = false,
+                        profileSaveError = ErrorMessages.messageOnly(e)
+                    )
+                    return@launch
+                }
+
+            load()
+            refreshSubscriptions()
+            loadSubscribers()
+            _uiState.value = _uiState.value.copy(isSavingProfile = false, profileSaveError = null)
+            onSuccess()
+        }
+    }
+
     fun saveAvatar(context: Context, pickedAvatarUri: Uri, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(

@@ -51,13 +51,20 @@ private val Purple = Color(0xFF9C88FF)
 private val SaveGray = Color(0xFFBDBDBD)
 
 @Composable
+private fun hasCustomAvatar(avatarUrl: String?): Boolean {
+    if (avatarUrl.isNullOrBlank()) return false
+    return !avatarUrl.contains("default-avatar", ignoreCase = true)
+}
+
+@Composable
 fun AvatarEditSheet(
     visible: Boolean,
     initialAvatarUrl: String?,
     isSaving: Boolean,
     errorMessage: String?,
     onDismiss: () -> Unit,
-    onSave: (pickedAvatarUri: Uri) -> Unit
+    onSave: (pickedAvatarUri: Uri) -> Unit,
+    onDeleteAvatar: () -> Unit
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -68,6 +75,8 @@ fun AvatarEditSheet(
         exit = slideOutHorizontally(targetOffsetX = { it })
     ) {
         var pickedAvatarUri by remember(visible) { mutableStateOf<Uri?>(null) }
+        var showDeleteConfirm by remember { mutableStateOf(false) }
+        val canDeleteAvatar = hasCustomAvatar(initialAvatarUrl)
 
         val pickAvatar = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             if (uri != null) pickedAvatarUri = uri
@@ -133,6 +142,20 @@ fun AvatarEditSheet(
                         Text("Выбрать фото")
                     }
 
+                    if (canDeleteAvatar) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { showDeleteConfirm = true },
+                            enabled = !isSaving,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Удалить фото профиля")
+                        }
+                    }
+
                     if (errorMessage != null) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(errorMessage, color = MaterialTheme.colorScheme.error)
@@ -161,6 +184,17 @@ fun AvatarEditSheet(
                     }
                 }
             }
+        }
+
+        if (showDeleteConfirm) {
+            AvatarDeleteConfirmSheet(
+                onDismiss = { showDeleteConfirm = false },
+                onConfirm = {
+                    showDeleteConfirm = false
+                    pickedAvatarUri = null
+                    onDeleteAvatar()
+                }
+            )
         }
     }
 }

@@ -54,6 +54,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material.icons.automirrored.filled.Comment
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
@@ -69,9 +70,12 @@ import com.example.vibeclip_frontend.di.AppModule
 import com.example.vibeclip_frontend.data.model.ReactionResponse
 import com.example.vibeclip_frontend.data.model.CommentResponse
 import com.example.vibeclip_frontend.data.repository.CommentRepository
+import com.example.vibeclip_frontend.data.repository.ReportAction
 import kotlinx.coroutines.launch
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.vibeclip_frontend.navigation.navigateToUserProfile
+import com.example.vibeclip_frontend.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -84,6 +88,27 @@ fun FeedScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val videoRepository = remember { VideoRepository() }
+    var viewerUsername by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(token) {
+        AppModule.userRepository.me(token).onSuccess { me ->
+            viewerUsername = me.username
+        }
+    }
+
+    // Обновляем ленту при возврате именно на вкладку "Лента"
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    var didEnterFeed by remember { mutableStateOf(false) }
+    LaunchedEffect(currentBackStackEntry) {
+        val route = currentBackStackEntry?.destination?.route
+        if (route == Screen.Feed.route) {
+            if (didEnterFeed) {
+                viewModel.reloadFeed()
+            } else {
+                didEnterFeed = true
+            }
+        }
+    }
     
     // Если передан initialVideoId, загружаем это видео и добавляем в начало списка
     LaunchedEffect(initialVideoId) {
@@ -109,6 +134,12 @@ fun FeedScreen(
         initialPage = 0,
         pageCount = { pageCount }
     )
+
+    LaunchedEffect(uiState.reloadNonce) {
+        if (uiState.reloadNonce > 0 && uiState.videos.isNotEmpty()) {
+            pagerState.scrollToPage(0)
+        }
+    }
     
     // Находим индекс видео и переключаемся на него после загрузки
     LaunchedEffect(initialVideoId, uiState.videos.size) {
@@ -130,7 +161,7 @@ fun FeedScreen(
                 title = { Text("VibeClip") },
                 actions = {
                     TextButton(onClick = onLogout) {
-                        Text("Logout")
+                        Text("Выход")
                     }
                 }
             )
@@ -203,7 +234,8 @@ fun FeedScreen(
                                     video = video,
                                     isActive = isActive,
                                     token = token,
-                                    navController = navController
+                                    navController = navController,
+                                    viewerUsername = viewerUsername
                                 )
                             } else {
                                 // Защита от выхода за границы
@@ -241,10 +273,12 @@ fun VideoFullScreenCard(
     video: VideoResponse,
     isActive: Boolean = true,
     token: String,
-    navController: NavController? = null
+    navController: NavController? = null,
+    viewerUsername: String? = null
 ) {
     val scope = rememberCoroutineScope()
     val reactionRepository = remember { AppModule.reactionRepository }
+    val reportRepository = remember { AppModule.reportRepository }
     val commentRepository = remember { AppModule.commentRepository }
     val videoRepository = remember { AppModule.videoRepository }
     
@@ -254,7 +288,28 @@ fun VideoFullScreenCard(
     var userViewReaction by remember { mutableStateOf<ReactionResponse?>(null) }
     var metrics by remember { mutableStateOf(video.metrics) }
     var isLoadingReaction by remember { mutableStateOf(false) }
+    var isReportLoading by remember { mutableStateOf(false) }
+    val reportUserKey = viewerUsername.orEmpty()
+    var userReported by remember(video.id, reportUserKey) {
+        mutableStateOf(
+            reportUserKey.isNotBlank() &&
+                reportRepository.isReportedLocally(reportUserKey, video.id)
+        )
+    }
+    var reportCount by remember(video.id) {
+        mutableStateOf(reportRepository.localReportCount(video.id))
+    }
+
+    fun refreshReportUi() {
+        if (reportUserKey.isNotBlank()) {
+            userReported = reportRepository.isReportedLocally(reportUserKey, video.id)
+        }
+        reportCount = reportRepository.localReportCount(video.id)
+    }
     var hasTrackedView by remember { mutableStateOf(false) } // Отслеживание, был ли отправлен просмотр
+    val isOwnVideo = viewerUsername != null &&
+        !video.authorUsername.isNullOrBlank() &&
+        video.authorUsername.equals(viewerUsername, ignoreCase = true)
     
     // Состояние для BottomSheet комментариев
     var showCommentsSheet by remember { mutableStateOf(false) }
@@ -267,8 +322,13 @@ fun VideoFullScreenCard(
             .substringBefore("/api")
     }
     
+    LaunchedEffect(video.id, reportUserKey) {
+        refreshReportUi()
+    }
+
     // Загрузка реакций пользователя и метрик при инициализации
     LaunchedEffect(video.id, token) {
+        refreshReportUi()
         val reactionsResult = reactionRepository.getVideoReactions(token, video.id)
         reactionsResult.onSuccess { reactions ->
             Log.d("FeedScreen", "Loaded reactions for video ${video.id}: ${reactions.size} reactions")
@@ -302,10 +362,11 @@ fun VideoFullScreenCard(
     
     // Перезагрузка реакций при активации видео (когда пользователь возвращается к видео)
     var lastActiveVideoId by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(isActive, video.id) {
-        if (isActive && lastActiveVideoId != video.id) {
+    LaunchedEffect(isActive, video.id, reportUserKey) {
+        if (!isActive) return@LaunchedEffect
+        refreshReportUi()
+        if (lastActiveVideoId != video.id) {
             // Когда видео становится активным и это другое видео, перезагружаем реакции и метрики
-            // чтобы убедиться, что данные актуальны
             lastActiveVideoId = video.id
             // Сбрасываем флаг отслеживания просмотра для нового видео
             hasTrackedView = false
@@ -345,7 +406,8 @@ fun VideoFullScreenCard(
                         viewCount = 0,
                         likeCount = maxOf(0, currentLikeCount - 1),
                         commentCount = 0,
-                        shareCount = 0
+                        shareCount = 0,
+                        reportCount = reportCount
                     )
                 
                 val result = reactionRepository.deleteReaction(token, video.id, "LIKE")
@@ -390,7 +452,8 @@ fun VideoFullScreenCard(
                         viewCount = 0,
                         likeCount = currentLikeCount + 1,
                         commentCount = 0,
-                        shareCount = 0
+                        shareCount = 0,
+                        reportCount = reportCount
                     )
                 
                 val result = reactionRepository.createReaction(token, video.id, "LIKE")
@@ -434,7 +497,7 @@ fun VideoFullScreenCard(
         val shareUrl = "$baseHost/api/v1/videos/${video.id}"
         
         val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Video URL", shareUrl)
+        val clip = ClipData.newPlainText("Ссылка на видео", shareUrl)
         clipboard.setPrimaryClip(clip)
         
         // Показываем сообщение "Скопировано"
@@ -472,6 +535,35 @@ fun VideoFullScreenCard(
     
     fun handleComment() {
         showCommentsSheet = true
+    }
+
+    fun handleReport() {
+        if (isReportLoading || isOwnVideo || reportUserKey.isBlank()) return
+        isReportLoading = true
+        scope.launch {
+            val result = if (userReported) {
+                reportRepository.withdrawReport(token, video.id, reportUserKey, reportUserKey)
+            } else {
+                reportRepository.reportVideo(token, video.id, reportUserKey, reportUserKey)
+            }
+            result.onSuccess { action ->
+                refreshReportUi()
+                val message = when (action) {
+                    ReportAction.Withdrawn -> "Жалоба снята"
+                    ReportAction.AlreadyReported -> "Вы уже пожаловались на это видео"
+                    ReportAction.Reported -> "Вы пожаловались на данное видео"
+                }
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                val message = if (userReported) {
+                    "Не удалось снять жалобу с видео"
+                } else {
+                    "Не удалось отправить жалобу на видео"
+                }
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
+            isReportLoading = false
+        }
     }
     
     val resolvedUrl = remember(video.videoUrl) {
@@ -647,7 +739,7 @@ fun VideoFullScreenCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
+                    contentDescription = "Воспроизведение",
                     tint = Color.White,
                     modifier = Modifier.size(64.dp)
                 )
@@ -797,7 +889,8 @@ fun VideoFullScreenCard(
             viewCount = 0,
             likeCount = 0,
             commentCount = 0,
-            shareCount = 0
+            shareCount = 0,
+            reportCount = 0
         )
         
         // Кнопки всегда отображаются справа по центру
@@ -834,6 +927,16 @@ fun VideoFullScreenCard(
                 onClick = { handleShare() },
                 isLoading = isLoadingReaction
             )
+
+            if (!isOwnVideo) {
+                ReactionButton(
+                    icon = Icons.Default.PriorityHigh,
+                    count = reportCount,
+                    isActive = userReported,
+                    onClick = { handleReport() },
+                    isLoading = isReportLoading
+                )
+            }
         }
 
         // Прогресс-бар для видео (только для активного видео) - полоса внизу
@@ -979,7 +1082,7 @@ private fun CommentsBottomSheet(
             comments = loadedComments
             isLoading = false
         }.onFailure { e ->
-            error = e.message ?: "Ошибка при загрузке комментариев"
+            error = ErrorMessages.messageOnly(e)
             isLoading = false
         }
     }
@@ -1049,9 +1152,11 @@ private fun CommentsBottomSheet(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Ошибка: $error",
+                                text = error!!,
                                 color = Color.White,
-                                fontSize = 14.sp
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
                     }
@@ -1126,7 +1231,7 @@ private fun CommentsBottomSheet(
                                         error = null // Очищаем ошибку при успехе
                                         onCommentAdded()
                                     }.onFailure { e ->
-                                        error = e.message ?: "Ошибка при отправке комментария"
+                                        error = ErrorMessages.messageOnly(e)
                                     }
                                     isSending = false
                                 }
@@ -1153,7 +1258,7 @@ private fun CommentsBottomSheet(
                                     error = null // Очищаем ошибку при успехе
                                     onCommentAdded()
                                 }.onFailure { e ->
-                                    error = e.message ?: "Ошибка при отправке комментария"
+                                    error = ErrorMessages.messageOnly(e)
                                 }
                                 isSending = false
                             }

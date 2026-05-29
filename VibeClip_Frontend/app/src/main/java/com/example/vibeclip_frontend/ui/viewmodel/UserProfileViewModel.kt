@@ -21,6 +21,7 @@ data class UserProfileUiState(
     val errorMessage: String? = null,
     val profile: UserProfileResponse? = null,
     val isOwnProfile: Boolean = false,
+    val isAdmin: Boolean = false,
     val isSubscribed: Boolean = false,
     val isPending: Boolean = false,
     val isSubscriptionActionInProgress: Boolean = false,
@@ -55,6 +56,7 @@ class UserProfileViewModel(
             val me = meResult.getOrNull()
             val meUsername = me?.username
             val isOwnProfile = meUsername != null && meUsername.equals(currentUsername, ignoreCase = true)
+            val isAdmin = me?.email.equals("admin@vibeclip.com", ignoreCase = true)
 
             val profileResult = userRepository.getProfile(token, currentUsername)
             val outgoingResult = subscriptionRepository.getOutgoingRequests(token)
@@ -74,6 +76,7 @@ class UserProfileViewModel(
                         isLoading = false,
                         profile = profile,
                         isOwnProfile = isOwnProfile || isOwnProfileById,
+                        isAdmin = isAdmin,
                         isSubscribed = isSubscribed,
                         isPending = isPending,
                         videos = profile.videos

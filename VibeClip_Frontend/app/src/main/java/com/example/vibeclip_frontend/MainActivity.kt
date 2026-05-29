@@ -128,8 +128,10 @@ private fun screenLabel(screen: Screen): String = when (screen) {
     Screen.Upload -> "Загрузка"
     Screen.Folders -> "Папки"
     Screen.Profile -> "Профиль"
-    is Screen.UserProfile -> "Профиль пользователя"  // <-- добавить
-    Screen.Login, Screen.Register -> screen.route
+    is Screen.UserProfile -> "Профиль пользователя"
+    is Screen.UserProfileFeed -> "Видео пользователя"
+    Screen.Login -> "Вход"
+    Screen.Register -> "Регистрация"
     is Screen.FolderFeed -> "Папка"
     // else -> screen.route  // как альтернатива, если не хочешь перечислять все варианты
 }

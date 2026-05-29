@@ -38,7 +38,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Vibe Clip",
+            text = "VibeClip",
             style = MaterialTheme.typography.displayMedium,
             modifier = Modifier.padding(bottom = 48.dp)
         )
@@ -46,7 +46,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text("Электронная почта") },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
@@ -56,7 +56,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text("Пароль") },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
@@ -85,14 +85,14 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text("Login")
+                Text("Войти")
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
         TextButton(onClick = onNavigateToRegister) {
-            Text("Don't have an account? Register")
+            Text("Нет аккаунта? Зарегистрироваться")
         }
     }
 }

@@ -76,7 +76,7 @@ fun AboutScreen(
                     // Логотип
                     Image(
                         painter = painterResource(R.drawable.vc_logo),
-                        contentDescription = "VibeClip Logo",
+                        contentDescription = "Логотип VibeClip",
                         modifier = Modifier.size(120.dp)
                     )
                     
