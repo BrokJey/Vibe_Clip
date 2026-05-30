@@ -218,12 +218,13 @@ fun ProfileScreen(
                         onAvatarEditClick = { showAvatarEdit = true }
                     )
 
+                    val acceptedSubscriptions = uiState.mySubscriptions.count { !it.isPending }
                     val pendingSubscriptions = uiState.mySubscriptions.count { it.isPending }
                     ProfileLinkRow(
                         title = "Мои подписки",
                         subtitle = buildString {
                             append(
-                                "${uiState.subscriptionsCount} ${subscriptionsCountLabel(uiState.subscriptionsCount.toInt())}"
+                                "$acceptedSubscriptions ${subscriptionsCountLabel(acceptedSubscriptions)}"
                             )
                             if (pendingSubscriptions > 0) {
                                 append(" · $pendingSubscriptions ${pendingRequestsLabel(pendingSubscriptions)}")
@@ -232,12 +233,13 @@ fun ProfileScreen(
                         onClick = { showSubscriptionsDialog = true }
                     )
 
+                    val acceptedSubscribers = uiState.mySubscribers.size
                     val pendingRequests = uiState.pendingSubscriberRequests.size
                     ProfileLinkRow(
                         title = "Мои подписчики",
                         subtitle = buildString {
                             append(
-                                "${uiState.subscribersCount} ${subscribersCountLabel(uiState.subscribersCount.toInt())}"
+                                "$acceptedSubscribers ${subscribersCountLabel(acceptedSubscribers)}"
                             )
                             if (pendingRequests > 0) {
                                 append(" · $pendingRequests ${pendingRequestsLabel(pendingRequests)}")

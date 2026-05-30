@@ -99,10 +99,9 @@ class ProfileViewModel(
 
             currentUser?.id?.let { subscriptionsStore.remove(it) }
 
-            refreshProfileCounts(currentUser)
-
             _uiState.value = _uiState.value.copy(
-                mySubscriptions = pendingList + acceptedList
+                mySubscriptions = pendingList + acceptedList,
+                subscriptionsCount = acceptedList.size.toLong()
             )
         }
     }
@@ -148,11 +147,10 @@ class ProfileViewModel(
 
             currentUser?.id?.let { subscribersStore.remove(it) }
 
-            refreshProfileCounts(currentUser)
-
             _uiState.value = _uiState.value.copy(
                 mySubscribers = accepted,
-                pendingSubscriberRequests = pending
+                pendingSubscriberRequests = pending,
+                subscribersCount = accepted.size.toLong()
             )
         }
     }
@@ -233,9 +231,7 @@ class ProfileViewModel(
                     userRepo.getProfile(token, user.username)
                         .onSuccess { profile ->
                             _uiState.value = _uiState.value.copy(
-                                privateProfile = profile.privateProfile,
-                                subscribersCount = profile.subscribersCount,
-                                subscriptionsCount = profile.subscriptionsCount
+                                privateProfile = profile.privateProfile
                             )
                             subscriptionsStore.updateAvatar(user.id, profile.avatarUrl)
                             refreshSubscriptions()
@@ -394,16 +390,5 @@ class ProfileViewModel(
         if (currentUser == null) return false
         return userId == currentUser.id ||
             username.equals(currentUser.username, ignoreCase = true)
-    }
-
-    private suspend fun refreshProfileCounts(currentUser: UserResponse?) {
-        if (currentUser == null) return
-        userRepo.getProfile(token, currentUser.username).onSuccess { profile ->
-            _uiState.value = _uiState.value.copy(
-                subscribersCount = profile.subscribersCount,
-                subscriptionsCount = profile.subscriptionsCount,
-                privateProfile = profile.privateProfile
-            )
-        }
     }
 }
