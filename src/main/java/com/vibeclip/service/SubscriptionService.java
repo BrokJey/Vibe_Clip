@@ -64,12 +64,12 @@ public class SubscriptionService {
 
     public long getSubscribersCount(User user) {
 
-        return subscriptionRepository.countByTarget(user);
+        return subscriptionRepository.countByTargetAndStatus(user, SubscriptionStatus.ACCEPTED);
     }
 
     public long getSubscriptionsCount(User user) {
 
-        return subscriptionRepository.countBySubscriber(user);
+        return subscriptionRepository.countBySubscriberAndStatus(user, SubscriptionStatus.ACCEPTED);
     }
 
     public void acceptSubscription(User target, UUID subscriberId) {
@@ -127,6 +127,32 @@ public class SubscriptionService {
                 .findBySubscriberAndStatus(user, SubscriptionStatus.ACCEPTED)
                 .stream()
                 .map(Subscription::getTarget)
+                .toList();
+    }
+
+    public List<SubscriptionRequestResponse> getAcceptedFollowing(User me) {
+
+        return subscriptionRepository
+                .findBySubscriberAndStatus(me, SubscriptionStatus.ACCEPTED)
+                .stream()
+                .map(sub -> SubscriptionRequestResponse.builder()
+                        .subscriberId(sub.getTarget().getId())
+                        .username(sub.getTarget().getUsername())
+                        .build()
+                )
+                .toList();
+    }
+
+    public List<SubscriptionRequestResponse> getAcceptedFollowers(User me) {
+
+        return subscriptionRepository
+                .findByTargetAndStatus(me, SubscriptionStatus.ACCEPTED)
+                .stream()
+                .map(sub -> SubscriptionRequestResponse.builder()
+                        .subscriberId(sub.getSubscriber().getId())
+                        .username(sub.getSubscriber().getUsername())
+                        .build()
+                )
                 .toList();
     }
 

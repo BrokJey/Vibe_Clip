@@ -6,7 +6,9 @@ import com.example.vibeclip_frontend.data.model.VideoListResponse
 import com.example.vibeclip_frontend.data.model.VideoResponse
 import com.example.vibeclip_frontend.data.model.isPublishedForFeed
 import com.example.vibeclip_frontend.data.repository.VideoRepository
+import com.example.vibeclip_frontend.di.AppModule
 import com.example.vibeclip_frontend.util.ErrorMessages
+import com.example.vibeclip_frontend.util.VideoFeedVisibilityFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -25,7 +27,8 @@ data class VideoUiState(
 
 class VideoViewModel(
     private val videoRepository: VideoRepository,
-    private val token: String
+    private val token: String,
+    private val visibilityFilter: VideoFeedVisibilityFilter = AppModule.videoFeedVisibilityFilter
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VideoUiState())
@@ -127,11 +130,15 @@ class VideoViewModel(
     }
 
     fun addVideoToStart(video: VideoResponse) {
-        if (!video.isPublishedForFeed()) return
-        val currentVideos = _uiState.value.videos.toMutableList()
-        if (currentVideos.none { it.id == video.id }) {
-            currentVideos.add(0, video)
-            _uiState.value = _uiState.value.copy(videos = currentVideos)
+        viewModelScope.launch {
+            val visible = visibilityFilter.filterVisible(token, listOf(video))
+            if (visible.isEmpty()) return@launch
+            val allowed = visible.first()
+            val currentVideos = _uiState.value.videos.toMutableList()
+            if (currentVideos.none { it.id == allowed.id }) {
+                currentVideos.add(0, allowed)
+                _uiState.value = _uiState.value.copy(videos = currentVideos)
+            }
         }
     }
 
@@ -157,16 +164,18 @@ class VideoViewModel(
             val merged = (mixedVideos + extraFromCatalog).distinctBy { it.id }
 
             val videos = if (merged.isNotEmpty()) merged else catalogVideos
+            val visible = visibilityFilter.filterVisible(token, videos)
             val hasMore = catalog.last == false ||
                 catalog.pageNumber < catalog.totalPages - 1 ||
                 videos.isNotEmpty()
 
-            Triple(videos, catalog, hasMore)
+            Triple(visible, catalog, hasMore)
         } else {
             val catalog = videoRepository.getPublishedFeed(token, page, size).getOrThrow()
             val videos = catalog.content.filter { it.isPublishedForFeed() }
+            val visible = visibilityFilter.filterVisible(token, videos)
             val hasMore = catalog.last == false || catalog.pageNumber < catalog.totalPages - 1
-            Triple(videos, catalog, hasMore)
+            Triple(visible, catalog, hasMore)
         }
     }
 

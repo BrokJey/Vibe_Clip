@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.vibeclip_frontend.data.model.FolderVideoResponse
 import com.example.vibeclip_frontend.data.model.isPublishedForFeed
 import com.example.vibeclip_frontend.data.repository.FolderRepository
+import com.example.vibeclip_frontend.di.AppModule
 import com.example.vibeclip_frontend.util.ErrorMessages
+import com.example.vibeclip_frontend.util.VideoFeedVisibilityFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -23,7 +25,8 @@ data class FolderFeedUiState(
 class FolderFeedViewModel(
     private val repo: FolderRepository,
     private val token: String,
-    private val folderId: String
+    private val folderId: String,
+    private val visibilityFilter: VideoFeedVisibilityFilter = AppModule.videoFeedVisibilityFilter
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FolderFeedUiState())
@@ -49,10 +52,9 @@ class FolderFeedViewModel(
             )
             repo.feed(token, folderId, limit)
                 .onSuccess { resp ->
-                    // Для папок не скрываем видео по local-флагу shown, чтобы не ломать выдачу.
-                    // Оставляем только опубликованные ролики.
                     val published = resp.videos.filter { it.video.isPublishedForFeed() }
-                    var finalVideos = if (shuffle) published.shuffled(Random(System.nanoTime())) else published
+                    val visible = visibilityFilter.filterFolderVideos(token, published)
+                    var finalVideos = if (shuffle) visible.shuffled(Random(System.nanoTime())) else visible
                     if (
                         shuffle &&
                         previousFirstId != null &&
@@ -65,7 +67,7 @@ class FolderFeedViewModel(
                             finalVideos.size > 1 &&
                             attempts < 5
                         ) {
-                            finalVideos = published.shuffled(Random(System.nanoTime()))
+                            finalVideos = visible.shuffled(Random(System.nanoTime()))
                             attempts++
                         }
                     }

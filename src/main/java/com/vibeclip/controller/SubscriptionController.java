@@ -69,4 +69,18 @@ public class SubscriptionController extends BaseController {
 
         return ResponseEntity.ok(subscriptionService.getOutgoingRequests(me));
     }
+
+    @GetMapping("/following")
+    public ResponseEntity<List<SubscriptionRequestResponse>> getFollowing(Authentication authentication) {
+        User me = getCurrentUser(authentication);
+
+        return ResponseEntity.ok(subscriptionService.getAcceptedFollowing(me));
+    }
+
+    @GetMapping("/followers")
+    public ResponseEntity<List<SubscriptionRequestResponse>> getFollowers(Authentication authentication) {
+        User me = getCurrentUser(authentication);
+
+        return ResponseEntity.ok(subscriptionService.getAcceptedFollowers(me));
+    }
 }

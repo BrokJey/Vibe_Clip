@@ -52,6 +52,9 @@ import com.example.vibeclip_frontend.ui.components.ProfileHeader
 import com.example.vibeclip_frontend.ui.components.ProfileVideoGrid
 import com.example.vibeclip_frontend.ui.viewmodel.AdminModerationViewModel
 import com.example.vibeclip_frontend.ui.viewmodel.ProfileViewModel
+import com.example.vibeclip_frontend.util.pendingRequestsLabel
+import com.example.vibeclip_frontend.util.subscribersCountLabel
+import com.example.vibeclip_frontend.util.subscriptionsCountLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -215,31 +218,33 @@ fun ProfileScreen(
                         onAvatarEditClick = { showAvatarEdit = true }
                     )
 
-                    if (uiState.mySubscriptions.isNotEmpty()) {
-                        ProfileLinkRow(
-                            title = "Мои подписки",
-                            subtitle = "${uiState.mySubscriptions.size} ${subscriptionsCountLabel(uiState.mySubscriptions.size)}",
-                            onClick = { showSubscriptionsDialog = true }
-                        )
-                    }
+                    val pendingSubscriptions = uiState.mySubscriptions.count { it.isPending }
+                    ProfileLinkRow(
+                        title = "Мои подписки",
+                        subtitle = buildString {
+                            append(
+                                "${uiState.subscriptionsCount} ${subscriptionsCountLabel(uiState.subscriptionsCount.toInt())}"
+                            )
+                            if (pendingSubscriptions > 0) {
+                                append(" · $pendingSubscriptions ${pendingRequestsLabel(pendingSubscriptions)}")
+                            }
+                        },
+                        onClick = { showSubscriptionsDialog = true }
+                    )
 
-                    val acceptedSubscribers = uiState.mySubscribers.size
                     val pendingRequests = uiState.pendingSubscriberRequests.size
-                    if (acceptedSubscribers > 0 || pendingRequests > 0) {
-                        ProfileLinkRow(
-                            title = "Мои подписчики",
-                            subtitle = buildString {
-                                if (acceptedSubscribers > 0) {
-                                    append("$acceptedSubscribers ${subscribersCountLabel(acceptedSubscribers)}")
-                                }
-                                if (pendingRequests > 0) {
-                                    if (isNotEmpty()) append(" · ")
-                                    append("$pendingRequests ${pendingRequestsLabel(pendingRequests)}")
-                                }
-                            },
-                            onClick = { showSubscribersDialog = true }
-                        )
-                    }
+                    ProfileLinkRow(
+                        title = "Мои подписчики",
+                        subtitle = buildString {
+                            append(
+                                "${uiState.subscribersCount} ${subscribersCountLabel(uiState.subscribersCount.toInt())}"
+                            )
+                            if (pendingRequests > 0) {
+                                append(" · $pendingRequests ${pendingRequestsLabel(pendingRequests)}")
+                            }
+                        },
+                        onClick = { showSubscribersDialog = true }
+                    )
 
                     HorizontalDivider()
 
@@ -365,39 +370,6 @@ private fun ProfileLinkRow(title: String, subtitle: String, onClick: () -> Unit)
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
         )
-    }
-}
-
-private fun subscriptionsCountLabel(count: Int): String {
-    val mod10 = count % 10
-    val mod100 = count % 100
-    return when {
-        mod100 in 11..14 -> "подписок"
-        mod10 == 1 -> "подписка"
-        mod10 in 2..4 -> "подписки"
-        else -> "подписок"
-    }
-}
-
-private fun subscribersCountLabel(count: Int): String {
-    val mod10 = count % 10
-    val mod100 = count % 100
-    return when {
-        mod100 in 11..14 -> "подписчиков"
-        mod10 == 1 -> "подписчик"
-        mod10 in 2..4 -> "подписчика"
-        else -> "подписчиков"
-    }
-}
-
-private fun pendingRequestsLabel(count: Int): String {
-    val mod10 = count % 10
-    val mod100 = count % 100
-    return when {
-        mod100 in 11..14 -> "заявок"
-        mod10 == 1 -> "заявка"
-        mod10 in 2..4 -> "заявки"
-        else -> "заявок"
     }
 }
 

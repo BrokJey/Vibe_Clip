@@ -28,11 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.vibeclip_frontend.data.model.UserProfileResponse
 import com.example.vibeclip_frontend.data.model.VideoResponse
 import com.example.vibeclip_frontend.ui.components.ErrorContent
 import com.example.vibeclip_frontend.ui.components.ProfileHeader
 import com.example.vibeclip_frontend.ui.components.ProfileVideoGrid
 import com.example.vibeclip_frontend.ui.viewmodel.UserProfileViewModel
+import com.example.vibeclip_frontend.util.subscribersCountLabel
+import com.example.vibeclip_frontend.util.subscriptionsCountLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,11 +95,10 @@ fun UserProfileScreen(
                     ProfileHeader(
                         username = profile.username,
                         avatarUrl = profile.avatarUrl,
-                        subtitle = when {
-                            profile.privateProfile && !uiState.isOwnProfile ->
-                                "Приватный профиль"
-                            else -> "${profile.subscribersCount} подписчиков"
-                        },
+                        subtitle = buildProfileStatsSubtitle(
+                            profile = profile,
+                            isOwnProfile = uiState.isOwnProfile
+                        ),
                         action = {
                             if (!uiState.isOwnProfile) {
                                 SubscriptionButton(
@@ -137,6 +139,22 @@ fun UserProfileScreen(
                 }
             }
         }
+    }
+}
+
+private fun buildProfileStatsSubtitle(
+    profile: UserProfileResponse,
+    isOwnProfile: Boolean
+): String = buildString {
+    append(
+        "${profile.subscribersCount} ${subscribersCountLabel(profile.subscribersCount.toInt())}"
+    )
+    append(" · ")
+    append(
+        "${profile.subscriptionsCount} ${subscriptionsCountLabel(profile.subscriptionsCount.toInt())}"
+    )
+    if (profile.privateProfile && !isOwnProfile) {
+        append("\nПриватный профиль")
     }
 }
 

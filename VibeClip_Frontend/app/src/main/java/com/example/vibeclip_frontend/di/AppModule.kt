@@ -14,6 +14,7 @@ import com.example.vibeclip_frontend.util.ReportTrackerStore
 import com.example.vibeclip_frontend.util.SubscribersStore
 import com.example.vibeclip_frontend.util.SubscriptionsStore
 import com.example.vibeclip_frontend.util.TokenManager
+import com.example.vibeclip_frontend.util.VideoFeedVisibilityFilter
 
 object AppModule {
     lateinit var tokenManager: TokenManager
@@ -54,6 +55,9 @@ object AppModule {
 
     lateinit var reportTrackerStore: ReportTrackerStore
         private set
+
+    lateinit var videoFeedVisibilityFilter: VideoFeedVisibilityFilter
+        private set
     
     fun initialize(context: Context) {
         tokenManager = TokenManager(context)
@@ -69,6 +73,7 @@ object AppModule {
         subscriptionRepository = SubscriptionRepository()
         subscriptionsStore = SubscriptionsStore(context)
         subscribersStore = SubscribersStore(context)
+        videoFeedVisibilityFilter = VideoFeedVisibilityFilter(userRepository, subscriptionsStore)
     }
 }
 

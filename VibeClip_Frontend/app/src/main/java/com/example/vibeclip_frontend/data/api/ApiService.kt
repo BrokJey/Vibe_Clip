@@ -220,6 +220,16 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Response<List<SubscriptionRequestResponse>>
 
+    @GET("subscriptions/following")
+    suspend fun getFollowingSubscriptions(
+        @Header("Authorization") token: String
+    ): Response<List<SubscriptionRequestResponse>>
+
+    @GET("subscriptions/followers")
+    suspend fun getFollowers(
+        @Header("Authorization") token: String
+    ): Response<List<SubscriptionRequestResponse>>
+
     @GET("subscriptions/requests/incoming")
     suspend fun getIncomingSubscriptionRequests(
         @Header("Authorization") token: String

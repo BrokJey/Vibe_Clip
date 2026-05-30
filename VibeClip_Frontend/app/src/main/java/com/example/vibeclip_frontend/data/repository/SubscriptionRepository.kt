@@ -33,6 +33,18 @@ class SubscriptionRepository {
         else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
     }
 
+    suspend fun getFollowing(token: String): Result<List<SubscriptionRequestResponse>> = runCatching {
+        val resp = apiService.getFollowingSubscriptions("Bearer $token")
+        if (resp.isSuccessful && resp.body() != null) resp.body()!!
+        else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
+    }
+
+    suspend fun getFollowers(token: String): Result<List<SubscriptionRequestResponse>> = runCatching {
+        val resp = apiService.getFollowers("Bearer $token")
+        if (resp.isSuccessful && resp.body() != null) resp.body()!!
+        else throw Exception(resp.errorBody()?.string().orEmpty().ifBlank { resp.message() })
+    }
+
     suspend fun acceptRequest(token: String, subscriberId: String): Result<Unit> = runCatching {
         val resp = apiService.acceptSubscription("Bearer $token", subscriberId)
         if (resp.isSuccessful) Unit

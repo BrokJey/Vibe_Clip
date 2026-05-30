@@ -35,6 +35,7 @@ data class ProfileUiState(
     val mySubscribers: List<StoredSubscription> = emptyList(),
     val pendingSubscriberRequests: List<SubscriberListItem> = emptyList(),
     val subscribersCount: Long = 0,
+    val subscriptionsCount: Long = 0,
     val privateProfile: Boolean = false,
     val isUpdatingPrivacy: Boolean = false,
     val privacyError: String? = null
@@ -62,71 +63,46 @@ class ProfileViewModel(
     fun loadSubscriptions() {
         viewModelScope.launch {
             val currentUser = _uiState.value.user ?: userRepo.me(token).getOrNull()
+            val followingResult = subscriptionRepo.getFollowing(token)
+            val following = followingResult.getOrNull().orEmpty()
+                .filterNot { it.isSelf(currentUser) }
+                .ifEmpty {
+                    subscriptionsStore.getAll()
+                        .filter { !it.isPending && !it.isSelf(currentUser) }
+                        .map { SubscriptionRequestResponse(subscriberId = it.userId, username = it.username) }
+                }
             val outgoing = subscriptionRepo.getOutgoingRequests(token).getOrNull().orEmpty()
                 .filterNot { it.isSelf(currentUser) }
-            val pendingIds = outgoing.map { it.subscriberId }.toSet()
+            val followingIds = following.map { it.subscriberId }.toSet()
 
-            val pendingList = mutableListOf<StoredSubscription>()
-            val acceptedList = mutableListOf<StoredSubscription>()
-
-            outgoing.forEach { request ->
+            val acceptedList = following.map { request ->
                 val profile = userRepo.getProfile(token, request.username).getOrNull()
-                val isPrivate = profile?.privateProfile != false
-                val item = StoredSubscription(
+                StoredSubscription(
                     userId = request.subscriberId,
                     username = request.username,
                     avatarUrl = profile?.avatarUrl,
-                    isPending = isPrivate
-                )
-                if (item.isSelf(currentUser)) return@forEach
-                if (isPrivate) {
-                    subscriptionsStore.add(item)
-                    pendingList.add(item)
-                } else {
-                    val accepted = item.copy(isPending = false)
-                    subscriptionsStore.add(accepted)
-                    acceptedList.add(accepted)
-                }
+                    isPending = false
+                ).also { subscriptionsStore.add(it) }
             }
 
-            subscriptionsStore.getAll()
-                .filter { stored ->
-                    !stored.isSelf(currentUser) &&
-                        pendingList.none { it.userId == stored.userId } &&
-                        acceptedList.none { it.userId == stored.userId }
-                }
-                .forEach { stored ->
-                    if (stored.userId in pendingIds) return@forEach
-                    val profile = userRepo.getProfile(token, stored.username).getOrNull()
-                    val isPrivate = profile?.privateProfile != false
-                    when {
-                        profile?.subscribed == true -> {
-                            val updated = stored.copy(
-                                avatarUrl = profile.avatarUrl ?: stored.avatarUrl,
-                                isPending = false
-                            )
-                            subscriptionsStore.add(updated)
-                            acceptedList.add(updated)
-                        }
-                        !isPrivate -> {
-                            val updated = stored.copy(
-                                avatarUrl = profile?.avatarUrl ?: stored.avatarUrl,
-                                isPending = false
-                            )
-                            subscriptionsStore.add(updated)
-                            acceptedList.add(updated)
-                        }
-                        else -> {
-                            // Приватный: нет в outgoing и не подписан — заявка отклонена
-                            subscriptionsStore.remove(stored.userId)
-                        }
-                    }
+            val pendingList = outgoing
+                .filter { it.subscriberId !in followingIds }
+                .map { request ->
+                    val profile = userRepo.getProfile(token, request.username).getOrNull()
+                    StoredSubscription(
+                        userId = request.subscriberId,
+                        username = request.username,
+                        avatarUrl = profile?.avatarUrl,
+                        isPending = true
+                    ).also { subscriptionsStore.add(it) }
                 }
 
             currentUser?.id?.let { subscriptionsStore.remove(it) }
 
+            refreshProfileCounts(currentUser)
+
             _uiState.value = _uiState.value.copy(
-                mySubscriptions = (pendingList + acceptedList).filterNot { it.isSelf(currentUser) }
+                mySubscriptions = pendingList + acceptedList
             )
         }
     }
@@ -136,37 +112,47 @@ class ProfileViewModel(
     fun loadSubscribers() {
         viewModelScope.launch {
             val currentUser = _uiState.value.user ?: userRepo.me(token).getOrNull()
+            val followersResult = subscriptionRepo.getFollowers(token)
+            val followers = followersResult.getOrNull().orEmpty()
+                .filterNot { it.isSelf(currentUser) }
+                .ifEmpty {
+                    subscribersStore.getAll()
+                        .filter { !it.isSelf(currentUser) }
+                        .map { SubscriptionRequestResponse(subscriberId = it.userId, username = it.username) }
+                }
             val incoming = subscriptionRepo.getIncomingRequests(token).getOrNull().orEmpty()
                 .filterNot { it.isSelf(currentUser) }
-            val pendingIds = incoming.map { it.subscriberId }.toSet()
+            val followerIds = followers.map { it.subscriberId }.toSet()
 
-            val pending = incoming.mapNotNull { request ->
-                if (request.isSelf(currentUser)) return@mapNotNull null
+            val accepted = followers.map { request ->
                 val profile = userRepo.getProfile(token, request.username).getOrNull()
-                SubscriberListItem(
+                StoredSubscription(
                     userId = request.subscriberId,
                     username = request.username,
-                    avatarUrl = profile?.avatarUrl,
-                    isPending = true
-                )
+                    avatarUrl = profile?.avatarUrl
+                ).also { subscribersStore.add(it) }
             }
 
-            // Только принятые подписчики; заявки (pending/rejected) не считаем
-            val accepted = subscribersStore.getAll()
-                .filter { it.userId !in pendingIds && !it.isSelf(currentUser) }
-                .map { stored ->
-                    val profile = userRepo.getProfile(token, stored.username).getOrNull()
-                    val updated = stored.copy(avatarUrl = profile?.avatarUrl ?: stored.avatarUrl)
-                    subscribersStore.add(updated)
-                    updated
+            val pending = incoming
+                .filter { it.subscriberId !in followerIds }
+                .mapNotNull { request ->
+                    if (request.isSelf(currentUser)) return@mapNotNull null
+                    val profile = userRepo.getProfile(token, request.username).getOrNull()
+                    SubscriberListItem(
+                        userId = request.subscriberId,
+                        username = request.username,
+                        avatarUrl = profile?.avatarUrl,
+                        isPending = true
+                    )
                 }
 
             currentUser?.id?.let { subscribersStore.remove(it) }
 
+            refreshProfileCounts(currentUser)
+
             _uiState.value = _uiState.value.copy(
                 mySubscribers = accepted,
-                pendingSubscriberRequests = pending,
-                subscribersCount = accepted.size.toLong()
+                pendingSubscriberRequests = pending
             )
         }
     }
@@ -246,7 +232,11 @@ class ProfileViewModel(
                     _uiState.value = _uiState.value.copy(isLoading = false, user = user)
                     userRepo.getProfile(token, user.username)
                         .onSuccess { profile ->
-                            _uiState.value = _uiState.value.copy(privateProfile = profile.privateProfile)
+                            _uiState.value = _uiState.value.copy(
+                                privateProfile = profile.privateProfile,
+                                subscribersCount = profile.subscribersCount,
+                                subscriptionsCount = profile.subscriptionsCount
+                            )
                             subscriptionsStore.updateAvatar(user.id, profile.avatarUrl)
                             refreshSubscriptions()
                             enrichSubscriptionsAvatars()
@@ -404,5 +394,16 @@ class ProfileViewModel(
         if (currentUser == null) return false
         return userId == currentUser.id ||
             username.equals(currentUser.username, ignoreCase = true)
+    }
+
+    private suspend fun refreshProfileCounts(currentUser: UserResponse?) {
+        if (currentUser == null) return
+        userRepo.getProfile(token, currentUser.username).onSuccess { profile ->
+            _uiState.value = _uiState.value.copy(
+                subscribersCount = profile.subscribersCount,
+                subscriptionsCount = profile.subscriptionsCount,
+                privateProfile = profile.privateProfile
+            )
+        }
     }
 }

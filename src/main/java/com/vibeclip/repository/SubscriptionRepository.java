@@ -19,6 +19,10 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
 
     long countBySubscriber(User subscriber);
 
+    long countByTargetAndStatus(User target, SubscriptionStatus status);
+
+    long countBySubscriberAndStatus(User subscriber, SubscriptionStatus status);
+
     void deleteBySubscriberAndTarget(User subscriber, User target);
 
     Optional<Subscription> findBySubscriberAndTarget(User subscriber, User target);
