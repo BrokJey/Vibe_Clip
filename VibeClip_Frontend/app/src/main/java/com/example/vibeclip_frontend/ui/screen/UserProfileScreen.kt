@@ -168,7 +168,8 @@ private fun SubscriptionButton(
 ) {
     val isLinked = isSubscribed || isPending
     val label = when {
-        isLinked -> "Отписаться"
+        isPending && !isSubscribed -> "Отменить заявку"
+        isSubscribed -> "Отписаться"
         isPrivateProfile -> "Отправить заявку"
         else -> "Подписаться"
     }

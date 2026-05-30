@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -33,17 +34,45 @@ public class SubscriptionService {
             throw new IllegalArgumentException("Нельзя подписаться на себя");
         }
 
-        if (subscriptionRepository.existsBySubscriberAndTarget(subscriber, target)) {
+        SubscriptionStatus desiredStatus = target.isPrivateProfile()
+                ? SubscriptionStatus.PENDING
+                : SubscriptionStatus.ACCEPTED;
+
+        Optional<Subscription> existing = subscriptionRepository
+                .findBySubscriberAndTarget(subscriber, target);
+
+        if (existing.isPresent()) {
+            Subscription sub = existing.get();
+            if (sub.getStatus() == SubscriptionStatus.REJECTED) {
+                sub.setStatus(desiredStatus);
+                return;
+            }
             throw new AlreadySubscribedException(targetId);
         }
 
         Subscription subscription = Subscription.builder()
                 .subscriber(subscriber)
                 .target(target)
-                .status(SubscriptionStatus.PENDING)
+                .status(desiredStatus)
                 .build();
 
         subscriptionRepository.save(subscription);
+    }
+
+    /**
+     * На публичном профиле подписка не требует одобрения — переводим устаревшие PENDING в ACCEPTED.
+     */
+    public void ensureAcceptedIfPublic(User subscriber, User target) {
+        if (subscriber == null || target.isPrivateProfile()) {
+            return;
+        }
+        if (subscriber.getId().equals(target.getId())) {
+            return;
+        }
+
+        subscriptionRepository.findBySubscriberAndTarget(subscriber, target)
+                .filter(sub -> sub.getStatus() == SubscriptionStatus.PENDING)
+                .ifPresent(sub -> sub.setStatus(SubscriptionStatus.ACCEPTED));
     }
 
     public void unsubscribe(User subscriber, UUID targetId) {

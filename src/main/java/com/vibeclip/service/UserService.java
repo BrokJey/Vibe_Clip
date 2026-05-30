@@ -92,6 +92,10 @@ public class UserService implements UserDetailsService {
 
         boolean isMe = currentUser.getId().equals(profileUser.getId());
 
+        if (!isMe) {
+            subscriptionService.ensureAcceptedIfPublic(currentUser, profileUser);
+        }
+
         boolean isAccepted =
                 subscriptionService.isSubscribed(currentUser, profileUser);
 

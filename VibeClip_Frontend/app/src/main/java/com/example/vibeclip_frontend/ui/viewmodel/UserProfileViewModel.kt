@@ -145,7 +145,7 @@ class UserProfileViewModel(
     }
 
     /**
-     * Состояние подписки: API + исходящие заявки + локальный список «Мои подписки».
+     * Состояние подписки по данным API: subscribed = ACCEPTED, outgoing = ожидает одобрения (только приватный профиль).
      */
     private fun resolveSubscriptionState(
         profile: UserProfileResponse,
@@ -155,18 +155,7 @@ class UserProfileViewModel(
         if (profile.subscribed) {
             return true to false
         }
-        val inOutgoing = pendingTargetIds.contains(profile.id)
-
-        if (!profile.privateProfile) {
-            // Публичный профиль: подписка без одобрения
-            if (inOutgoing || stored != null) {
-                return true to false
-            }
-            return false to false
-        }
-
-        // Приватный профиль: только ACCEPTED или активная заявка (есть в outgoing)
-        if (inOutgoing) {
+        if (profile.privateProfile && pendingTargetIds.contains(profile.id)) {
             return false to true
         }
         if (stored != null) {
