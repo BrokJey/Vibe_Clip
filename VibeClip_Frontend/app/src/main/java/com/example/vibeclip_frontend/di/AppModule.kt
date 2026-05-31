@@ -73,7 +73,11 @@ object AppModule {
         subscriptionRepository = SubscriptionRepository()
         subscriptionsStore = SubscriptionsStore(context)
         subscribersStore = SubscribersStore(context)
-        videoFeedVisibilityFilter = VideoFeedVisibilityFilter(userRepository, subscriptionsStore)
+        videoFeedVisibilityFilter = VideoFeedVisibilityFilter(
+            userRepository,
+            subscriptionsStore,
+            subscriptionRepository
+        )
     }
 }
 

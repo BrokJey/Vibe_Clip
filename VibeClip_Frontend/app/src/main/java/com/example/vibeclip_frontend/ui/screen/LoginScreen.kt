@@ -9,6 +9,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vibeclip_frontend.di.AppModule
+import com.example.vibeclip_frontend.ui.components.AppLogo
 import com.example.vibeclip_frontend.ui.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,11 +38,7 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "VibeClip",
-            style = MaterialTheme.typography.displayMedium,
-            modifier = Modifier.padding(bottom = 48.dp)
-        )
+        AppLogo(modifier = Modifier.padding(bottom = 48.dp))
         
         OutlinedTextField(
             value = email,

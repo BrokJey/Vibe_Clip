@@ -9,6 +9,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vibeclip_frontend.di.AppModule
+import com.example.vibeclip_frontend.ui.components.AppLogo
 import com.example.vibeclip_frontend.ui.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,10 +39,12 @@ fun RegisterScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        AppLogo(modifier = Modifier.padding(bottom = 24.dp))
+
         Text(
             text = "Регистрация",
-            style = MaterialTheme.typography.displaySmall,
-            modifier = Modifier.padding(bottom = 32.dp)
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = 24.dp)
         )
         
         OutlinedTextField(

@@ -27,14 +27,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.vibeclip_frontend.di.AppModule
 import com.example.vibeclip_frontend.navigation.NavGraph
 import com.example.vibeclip_frontend.navigation.Screen
+import com.example.vibeclip_frontend.navigation.bottomNavTabForRoute
 import com.example.vibeclip_frontend.ui.theme.VibeClip_FrontendTheme
 
 class MainActivity : ComponentActivity() {
         override fun onCreate(savedInstanceState: Bundle?) {
+                setTheme(R.style.Theme_VibeClip_Frontend)
                 super.onCreate(savedInstanceState)
                 enableEdgeToEdge()
         
@@ -45,6 +48,8 @@ class MainActivity : ComponentActivity() {
                         VibeClip_FrontendTheme {
                                 var token by remember { mutableStateOf(tokenManager.getToken()) }
                                 val navController = rememberNavController()
+                                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                                val selectedBottomTab = bottomNavTabForRoute(navBackStackEntry?.destination?.route)
                 
                                 Surface(
                                         modifier = Modifier.fillMaxSize(),
@@ -64,9 +69,8 @@ class MainActivity : ComponentActivity() {
                                                                         containerColor = Color.Black,
                                                                         contentColor = Color.White
                                                                 ) {
-                                                                        val currentRoute = navController.currentDestination?.route
                                                                         bottomItems.forEach { screen ->
-                                                                                val isSelected = currentRoute == screen.route
+                                                                                val isSelected = selectedBottomTab?.route == screen.route
                                                                                 NavigationBarItem(
                                                                                         selected = isSelected,
                                                                                         onClick = {

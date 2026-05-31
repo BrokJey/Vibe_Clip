@@ -1,5 +1,6 @@
 package com.example.vibeclip_frontend.ui.screen
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
@@ -23,17 +24,18 @@ fun FolderMoreMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    IconButton(onClick = { expanded = true }) {
-        Icon(
-            imageVector = Icons.Default.MoreVert,
-            contentDescription = "Меню папки"
-        )
-    }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Меню папки"
+            )
+        }
 
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false }
-    ) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
         DropdownMenuItem(
             text = { Text("Открыть ленту") },
             onClick = {
@@ -69,6 +71,7 @@ fun FolderMoreMenu(
                 onDelete()
             }
         )
+        }
     }
 }
 

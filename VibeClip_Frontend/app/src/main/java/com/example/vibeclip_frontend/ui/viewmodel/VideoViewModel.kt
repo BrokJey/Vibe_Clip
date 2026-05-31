@@ -55,6 +55,7 @@ class VideoViewModel(
             fetchFeedPage(page, FEED_PAGE_SIZE)
                 .onSuccess { (videos, response, hasMore) ->
                     if (myToken != requestToken) return@onSuccess
+                    if (page == 0) visibilityFilter.invalidateCache()
                     applyFeedPage(page, videos, response, hasMore)
                 }
                 .onFailure { error ->
@@ -96,6 +97,7 @@ class VideoViewModel(
             fetchFeedPage(0, FEED_PAGE_SIZE)
                 .onSuccess { (videos, response, hasMore) ->
                     if (myToken != requestToken) return@onSuccess
+                    visibilityFilter.invalidateCache()
 
                     var shuffled = videos.shuffled(Random(System.nanoTime()))
                     var attempts = 0

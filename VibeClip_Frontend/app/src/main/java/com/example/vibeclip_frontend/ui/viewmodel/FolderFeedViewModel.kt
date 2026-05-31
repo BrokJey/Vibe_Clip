@@ -42,6 +42,7 @@ class FolderFeedViewModel(
 
     fun loadPage(limit: Int = 20, shuffle: Boolean = false) {
         viewModelScope.launch {
+            if (shuffle) visibilityFilter.invalidateCache()
             val previousFirstId = _uiState.value.videos.firstOrNull()?.id
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
